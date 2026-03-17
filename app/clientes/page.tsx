@@ -1,294 +1,189 @@
 'use client';
 
 import { useState } from 'react';
-import { Cliente } from '@/types';
-import { clientesMock } from '@/data/mockData';
+import { useAppData } from '@/components/AppProvider';
+import { TipoTramite } from '@/types';
+
+const tiposTramite: TipoTramite[] = ['Jubilación', 'Pensión', 'Medicamentos', 'Subsidio', 'Otro'];
 
 export default function ClientesPage() {
-  const [clientes, setClientes] = useState<Cliente[]>(clientesMock);
-  const [showModal, setShowModal] = useState(false);
-  const [newCliente, setNewCliente] = useState({
+  const { data, addCliente, deleteCliente } = useAppData();
+  const [search, setSearch] = useState('');
+  const [form, setForm] = useState({
     nombre: '',
     dni: '',
-    tipoTramite: 'Jubilación' as const,
+    tipoTramite: 'Jubilación' as TipoTramite,
     porcentajeComision: 15,
     telefono: '',
     email: '',
+    notas: '',
   });
 
-  const handleAddCliente = () => {
-    const cliente: Cliente = {
-      id: (clientes.length + 1).toString(),
-      ...newCliente,
-      estado: 'Activo',
-      fechaAlta: new Date().toISOString().split('T')[0],
-    };
-    setClientes([...clientes, cliente]);
-    setShowModal(false);
-    setNewCliente({
+  const clientesFiltrados = data.clientes.filter((cliente) => {
+    const query = search.trim().toLowerCase();
+
+    if (!query) {
+      return true;
+    }
+
+    return (
+      cliente.nombre.toLowerCase().includes(query) ||
+      cliente.dni.toLowerCase().includes(query) ||
+      (cliente.email || '').toLowerCase().includes(query)
+    );
+  });
+
+  const promedioComision = data.clientes.length
+    ? data.clientes.reduce((sum, cliente) => sum + cliente.porcentajeComision, 0) / data.clientes.length
+    : 0;
+
+  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (!form.nombre.trim() || !form.dni.trim()) {
+      return;
+    }
+
+    addCliente(form);
+    setForm({
       nombre: '',
       dni: '',
       tipoTramite: 'Jubilación',
       porcentajeComision: 15,
       telefono: '',
       email: '',
+      notas: '',
     });
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="mb-8 flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Clientes</h1>
-          <p className="mt-2 text-sm text-gray-600">
-            Gestiona tu cartera de clientes
+    <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
+      <section className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
+        <div className="rounded-[2rem] border border-white/10 bg-white/5 p-5 shadow-xl shadow-slate-950/20 sm:p-6">
+          <p className="text-xs uppercase tracking-[0.35em] text-cyan-300">Clientes</p>
+          <h1 className="mt-3 text-3xl font-semibold text-white">Base de clientes persistente</h1>
+          <p className="mt-3 text-sm leading-6 text-slate-300">
+            Cargá nombre, contacto, comisión y notas. Todo queda guardado al recargar.
           </p>
-        </div>
-        <button
-          onClick={() => setShowModal(true)}
-          className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors"
-        >
-          <svg className="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-          </svg>
-          Agregar Cliente
-        </button>
-      </div>
-
-      {/* Estadísticas rápidas */}
-      <div className="grid grid-cols-1 gap-5 sm:grid-cols-3 mb-8">
-        <div className="bg-white overflow-hidden shadow-sm rounded-lg border border-gray-200 px-4 py-5">
-          <dt className="text-sm font-medium text-gray-500 truncate">
-            Total Clientes
-          </dt>
-          <dd className="mt-1 text-3xl font-semibold text-gray-900">
-            {clientes.length}
-          </dd>
-        </div>
-        <div className="bg-white overflow-hidden shadow-sm rounded-lg border border-gray-200 px-4 py-5">
-          <dt className="text-sm font-medium text-gray-500 truncate">
-            Clientes Activos
-          </dt>
-          <dd className="mt-1 text-3xl font-semibold text-gray-900">
-            {clientes.filter((c) => c.estado === 'Activo').length}
-          </dd>
-        </div>
-        <div className="bg-white overflow-hidden shadow-sm rounded-lg border border-gray-200 px-4 py-5">
-          <dt className="text-sm font-medium text-gray-500 truncate">
-            Comisión Promedio
-          </dt>
-          <dd className="mt-1 text-3xl font-semibold text-gray-900">
-            {(
-              clientes.reduce((sum, c) => sum + c.porcentajeComision, 0) /
-              clientes.length
-            ).toFixed(1)}
-            %
-          </dd>
-        </div>
-      </div>
-
-      {/* Tabla de clientes */}
-      <div className="bg-white shadow-sm rounded-lg border border-gray-200 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Cliente
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  DNI
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Tipo de Trámite
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  % Comisión
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Contacto
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Estado
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {clientes.map((cliente) => (
-                <tr key={cliente.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center">
-                      <div className="flex-shrink-0 h-10 w-10 bg-primary-100 rounded-full flex items-center justify-center">
-                        <span className="text-primary-600 font-medium text-sm">
-                          {cliente.nombre.charAt(0)}
-                        </span>
-                      </div>
-                      <div className="ml-4">
-                        <div className="text-sm font-medium text-gray-900">
-                          {cliente.nombre}
-                        </div>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {cliente.dni}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {cliente.tipoTramite}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="text-sm font-semibold text-primary-600">
-                      {cliente.porcentajeComision}%
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    <div>{cliente.telefono}</div>
-                    <div className="text-xs text-gray-400">{cliente.email}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span
-                      className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                        cliente.estado === 'Activo'
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-gray-100 text-gray-800'
-                      }`}
-                    >
-                      {cliente.estado}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* Modal para agregar cliente */}
-      {showModal && (
-        <div className="fixed z-10 inset-0 overflow-y-auto">
-          <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-            <div
-              className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"
-              onClick={() => setShowModal(false)}
-            ></div>
-
-            <div className="inline-block align-bottom bg-white rounded-lg px-4 pt-5 pb-4 text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full sm:p-6">
-              <div>
-                <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">
-                  Agregar Nuevo Cliente
-                </h3>
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">
-                      Nombre completo
-                    </label>
-                    <input
-                      type="text"
-                      value={newCliente.nombre}
-                      onChange={(e) =>
-                        setNewCliente({ ...newCliente, nombre: e.target.value })
-                      }
-                      className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">
-                      DNI
-                    </label>
-                    <input
-                      type="text"
-                      value={newCliente.dni}
-                      onChange={(e) =>
-                        setNewCliente({ ...newCliente, dni: e.target.value })
-                      }
-                      className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">
-                      Tipo de Trámite
-                    </label>
-                    <select
-                      value={newCliente.tipoTramite}
-                      onChange={(e) =>
-                        setNewCliente({
-                          ...newCliente,
-                          tipoTramite: e.target.value as any,
-                        })
-                      }
-                      className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                    >
-                      <option>Jubilación</option>
-                      <option>Pensión</option>
-                      <option>Medicamentos</option>
-                      <option>Subsidio</option>
-                      <option>Otro</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">
-                      % Comisión
-                    </label>
-                    <input
-                      type="number"
-                      value={newCliente.porcentajeComision}
-                      onChange={(e) =>
-                        setNewCliente({
-                          ...newCliente,
-                          porcentajeComision: Number(e.target.value),
-                        })
-                      }
-                      className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">
-                      Teléfono
-                    </label>
-                    <input
-                      type="text"
-                      value={newCliente.telefono}
-                      onChange={(e) =>
-                        setNewCliente({ ...newCliente, telefono: e.target.value })
-                      }
-                      className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">
-                      Email
-                    </label>
-                    <input
-                      type="email"
-                      value={newCliente.email}
-                      onChange={(e) =>
-                        setNewCliente({ ...newCliente, email: e.target.value })
-                      }
-                      className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                    />
-                  </div>
-                </div>
-              </div>
-              <div className="mt-5 sm:mt-6 sm:grid sm:grid-cols-2 sm:gap-3">
-                <button
-                  type="button"
-                  onClick={() => setShowModal(false)}
-                  className="w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 sm:text-sm"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="button"
-                  onClick={handleAddCliente}
-                  className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-primary-600 text-base font-medium text-white hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 sm:text-sm"
-                >
-                  Agregar
-                </button>
-              </div>
+          <div className="mt-5 grid grid-cols-3 gap-3 text-sm">
+            <div className="rounded-2xl border border-white/10 bg-slate-950/40 p-4">
+              <p className="text-slate-400">Total</p>
+              <p className="mt-1 text-2xl font-semibold text-white">{data.clientes.length}</p>
+            </div>
+            <div className="rounded-2xl border border-white/10 bg-slate-950/40 p-4">
+              <p className="text-slate-400">Activos</p>
+              <p className="mt-1 text-2xl font-semibold text-white">
+                {data.clientes.filter((cliente) => cliente.estado === 'Activo').length}
+              </p>
+            </div>
+            <div className="rounded-2xl border border-white/10 bg-slate-950/40 p-4">
+              <p className="text-slate-400">Comisión prom.</p>
+              <p className="mt-1 text-2xl font-semibold text-white">{promedioComision.toFixed(1)}%</p>
             </div>
           </div>
+          <div className="mt-5">
+            <input
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Buscar por nombre, DNI o email"
+              className="w-full rounded-2xl border border-white/10 bg-slate-950/50 px-4 py-3 outline-none focus:border-cyan-400"
+            />
+          </div>
         </div>
-      )}
+
+        <form onSubmit={handleSubmit} className="rounded-[2rem] border border-white/10 bg-slate-900/70 p-5 shadow-xl shadow-slate-950/20 sm:p-6">
+          <h2 className="text-xl font-semibold text-white">Nuevo cliente</h2>
+          <p className="mt-1 text-sm text-slate-400">Formulario pensado para cargar rápido desde mobile.</p>
+          <div className="mt-5 grid gap-4 sm:grid-cols-2">
+            <label className="block sm:col-span-2">
+              <span className="mb-2 block text-sm text-slate-300">Nombre completo</span>
+              <input value={form.nombre} onChange={(event) => setForm({ ...form, nombre: event.target.value })} className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none focus:border-cyan-400" />
+            </label>
+            <label className="block">
+              <span className="mb-2 block text-sm text-slate-300">DNI</span>
+              <input value={form.dni} onChange={(event) => setForm({ ...form, dni: event.target.value })} className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none focus:border-cyan-400" />
+            </label>
+            <label className="block">
+              <span className="mb-2 block text-sm text-slate-300">Comisión %</span>
+              <input type="number" value={form.porcentajeComision} onChange={(event) => setForm({ ...form, porcentajeComision: Number(event.target.value) })} className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none focus:border-cyan-400" />
+            </label>
+            <label className="block sm:col-span-2">
+              <span className="mb-2 block text-sm text-slate-300">Tipo de trámite</span>
+              <select value={form.tipoTramite} onChange={(event) => setForm({ ...form, tipoTramite: event.target.value as TipoTramite })} className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none focus:border-cyan-400">
+                {tiposTramite.map((tipo) => (
+                  <option key={tipo} value={tipo} className="bg-slate-900">
+                    {tipo}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="block">
+              <span className="mb-2 block text-sm text-slate-300">Teléfono</span>
+              <input value={form.telefono} onChange={(event) => setForm({ ...form, telefono: event.target.value })} className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none focus:border-cyan-400" />
+            </label>
+            <label className="block">
+              <span className="mb-2 block text-sm text-slate-300">Email</span>
+              <input type="email" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none focus:border-cyan-400" />
+            </label>
+            <label className="block sm:col-span-2">
+              <span className="mb-2 block text-sm text-slate-300">Notas</span>
+              <textarea value={form.notas} onChange={(event) => setForm({ ...form, notas: event.target.value })} rows={4} className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none focus:border-cyan-400" />
+            </label>
+          </div>
+          <button type="submit" className="mt-5 w-full rounded-2xl bg-cyan-400 px-4 py-3 font-semibold text-slate-950 transition hover:bg-cyan-300">
+            Guardar cliente
+          </button>
+        </form>
+      </section>
+
+      <section className="mt-6 space-y-3">
+        {clientesFiltrados.length === 0 ? (
+          <div className="rounded-[2rem] border border-dashed border-white/10 bg-white/5 p-6 text-sm text-slate-400">
+            No hay clientes cargados todavía.
+          </div>
+        ) : (
+          clientesFiltrados.map((cliente) => (
+            <article key={cliente.id} className="rounded-[2rem] border border-white/10 bg-white/5 p-5 shadow-lg shadow-slate-950/20">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-sm text-slate-400">{cliente.dni}</p>
+                  <h2 className="mt-1 text-xl font-semibold text-white">{cliente.nombre}</h2>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="rounded-full border border-cyan-400/20 bg-cyan-400/10 px-3 py-1 text-xs font-medium text-cyan-200">
+                    {cliente.estado}
+                  </span>
+                  <button type="button" onClick={() => deleteCliente(cliente.id)} className="rounded-full border border-rose-400/20 bg-rose-400/10 px-3 py-1 text-xs font-medium text-rose-200">
+                    Borrar
+                  </button>
+                </div>
+              </div>
+              <div className="mt-4 grid grid-cols-2 gap-3 text-sm text-slate-300 sm:grid-cols-4">
+                <div>
+                  <p className="text-slate-500">Trámite</p>
+                  <p className="mt-1">{cliente.tipoTramite}</p>
+                </div>
+                <div>
+                  <p className="text-slate-500">Comisión</p>
+                  <p className="mt-1">{cliente.porcentajeComision}%</p>
+                </div>
+                <div>
+                  <p className="text-slate-500">Teléfono</p>
+                  <p className="mt-1">{cliente.telefono || 'Sin dato'}</p>
+                </div>
+                <div>
+                  <p className="text-slate-500">Alta</p>
+                  <p className="mt-1">{cliente.fechaAlta}</p>
+                </div>
+              </div>
+              <div className="mt-4 rounded-2xl border border-white/10 bg-slate-950/40 p-4 text-sm text-slate-300">
+                <p><span className="text-slate-500">Email:</span> {cliente.email || 'Sin dato'}</p>
+                <p className="mt-2"><span className="text-slate-500">Notas:</span> {cliente.notas || 'Sin notas'}</p>
+              </div>
+            </article>
+          ))
+        )}
+      </section>
     </div>
   );
 }

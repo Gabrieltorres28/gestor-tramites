@@ -1,13 +1,14 @@
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
-import Navigation from '@/components/Navigation';
+import { AppProvider } from '@/components/AppProvider';
+import AppShell from '@/components/AppShell';
 
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'Gestor Administrativo - Sistema de Trámites',
-  description: 'Sistema profesional para gestión de trámites y comisiones',
+  title: 'Gestor Previsional',
+  description: 'Panel con login y persistencia local para gestión de clientes, trámites y caja.',
 };
 
 export default function RootLayout({
@@ -18,10 +19,9 @@ export default function RootLayout({
   return (
     <html lang="es">
       <body className={inter.className}>
-        <div className="min-h-screen bg-gray-50">
-          <Navigation />
-          <main>{children}</main>
-        </div>
+        <AppProvider>
+          <AppShell>{children}</AppShell>
+        </AppProvider>
       </body>
     </html>
   );

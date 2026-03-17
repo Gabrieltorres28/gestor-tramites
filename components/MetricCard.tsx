@@ -17,36 +17,23 @@ export default function MetricCard({
   icon,
 }: MetricCardProps) {
   return (
-    <div className="bg-white overflow-hidden shadow-sm rounded-lg border border-gray-200 hover:shadow-md transition-shadow">
-      <div className="p-6">
-        <div className="flex items-center justify-between">
-          <div className="flex-1">
-            <p className="text-sm font-medium text-gray-600 mb-1">{title}</p>
-            <p className="text-3xl font-semibold text-gray-900">{value}</p>
-            {subtitle && (
-              <p className="text-sm text-gray-500 mt-1">{subtitle}</p>
-            )}
-            {trend && (
-              <div className="flex items-center mt-2">
-                <span
-                  className={`text-sm font-medium ${
-                    trend.isPositive ? 'text-green-600' : 'text-red-600'
-                  }`}
-                >
-                  {trend.isPositive ? '↑' : '↓'} {trend.value}
-                </span>
-                <span className="text-xs text-gray-500 ml-2">vs. mes anterior</span>
-              </div>
-            )}
-          </div>
-          {icon && (
-            <div className="ml-4 flex-shrink-0">
-              <div className="w-12 h-12 bg-primary-100 rounded-lg flex items-center justify-center text-primary-600">
-                {icon}
-              </div>
-            </div>
-          )}
+    <div className="rounded-3xl border border-white/10 bg-white/5 p-5 shadow-lg shadow-slate-950/20 backdrop-blur-sm">
+      <div className="flex items-start justify-between gap-4">
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-medium text-slate-400">{title}</p>
+          <p className="mt-2 text-3xl font-semibold tracking-tight text-white">{value}</p>
+          {subtitle ? <p className="mt-2 text-sm text-slate-400">{subtitle}</p> : null}
+          {trend ? (
+            <p className={`mt-3 text-sm font-medium ${trend.isPositive ? 'text-emerald-300' : 'text-rose-300'}`}>
+              {trend.isPositive ? 'Sube' : 'Baja'} {trend.value}
+            </p>
+          ) : null}
         </div>
+        {icon ? (
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-cyan-400/15 text-cyan-300">
+            {icon}
+          </div>
+        ) : null}
       </div>
     </div>
   );

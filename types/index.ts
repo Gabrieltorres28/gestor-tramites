@@ -13,6 +13,7 @@ export interface Cliente {
   telefono?: string;
   email?: string;
   fechaAlta: string;
+  notas?: string;
 }
 
 export interface Tramite {
@@ -65,3 +66,19 @@ export interface Lote {
 }
 
 export type EstadoVencimiento = 'ok' | 'proximo' | 'vencido';
+
+export interface AppSettings {
+  businessName: string;
+  ownerName: string;
+  loginEmail: string;
+  loginPassword: string;
+}
+
+export interface AppData {
+  settings: AppSettings;
+  clientes: Cliente[];
+  tramites: Tramite[];
+  movimientos: Movimiento[];
+  medicamentos: Medicamento[];
+  lotes: Lote[];
+}

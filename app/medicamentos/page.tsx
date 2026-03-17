@@ -1,8 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Medicamento, Lote } from '@/types';
-import { medicamentosMock, lotesMock } from '@/data/mockData';
+import { useAppData } from '@/components/AppProvider';
 import {
   calcularStockTotal,
   encontrarProximoVencimiento,
@@ -13,382 +12,322 @@ import {
 } from '@/utils/medicamentos';
 
 export default function MedicamentosPage() {
-  const [medicamentos] = useState<Medicamento[]>(medicamentosMock);
-  const [lotes, setLotes] = useState<Lote[]>(lotesMock);
+  const { data, addMedicamento, deleteMedicamento, addLote, deleteLote, updateLotes } = useAppData();
   const [medicamentoSeleccionado, setMedicamentoSeleccionado] = useState<string | null>(null);
-  const [mostrarModalVenta, setMostrarModalVenta] = useState(false);
   const [cantidadVenta, setCantidadVenta] = useState(1);
-  const [mensajeVenta, setMensajeVenta] = useState<{ tipo: 'success' | 'error'; texto: string } | null>(null);
+  const [mensajeVenta, setMensajeVenta] = useState('');
+  const [medForm, setMedForm] = useState({
+    nombre: '',
+    proveedor: '',
+    precioCompra: 0,
+    precioVenta: 0,
+  });
+  const [loteForm, setLoteForm] = useState({
+    medicamentoId: '',
+    numeroLote: '',
+    fechaVencimiento: '',
+    cantidadDisponible: 0,
+  });
 
-  const abrirModalVenta = (medicamentoId: string) => {
-    setMedicamentoSeleccionado(medicamentoId);
-    setMostrarModalVenta(true);
-    setMensajeVenta(null);
-    setCantidadVenta(1);
-  };
-
-  const procesarVentaMedicamento = () => {
-    if (!medicamentoSeleccionado) return;
-
-    const resultado = procesarVenta(medicamentoSeleccionado, cantidadVenta, lotes);
-    
-    if (resultado.exito) {
-      setLotes(resultado.lotesActualizados);
-      setMensajeVenta({ tipo: 'success', texto: resultado.mensaje });
-      setTimeout(() => {
-        setMostrarModalVenta(false);
-        setMensajeVenta(null);
-      }, 2000);
-    } else {
-      setMensajeVenta({ tipo: 'error', texto: resultado.mensaje });
-    }
-  };
-
-  const getMedicamentoConInfo = (med: Medicamento) => {
-    const stockTotal = calcularStockTotal(med.id, lotes);
-    const proximoVencimiento = encontrarProximoVencimiento(med.id, lotes);
+  const medicamentosConInfo = data.medicamentos.map((medicamento) => {
+    const stockTotal = calcularStockTotal(medicamento.id, data.lotes);
+    const proximoVencimiento = encontrarProximoVencimiento(medicamento.id, data.lotes);
     const estado = proximoVencimiento ? obtenerEstadoVencimiento(proximoVencimiento) : 'ok';
     const diasRestantes = proximoVencimiento ? calcularDiasHastaVencimiento(proximoVencimiento) : null;
 
     return {
-      ...med,
+      ...medicamento,
       stockTotal,
       proximoVencimiento,
       estado,
       diasRestantes,
     };
-  };
+  });
 
-  const medicamentosConInfo = medicamentos.map(getMedicamentoConInfo);
+  const procesarVentaMedicamento = () => {
+    if (!medicamentoSeleccionado || cantidadVenta <= 0) {
+      return;
+    }
 
-  // Estadísticas
-  const estadisticas = {
-    totalMedicamentos: medicamentos.length,
-    stockTotal: medicamentosConInfo.reduce((sum, m) => sum + m.stockTotal, 0),
-    porVencer: medicamentosConInfo.filter(m => m.estado === 'proximo').length,
-    vencidos: medicamentosConInfo.filter(m => m.estado === 'vencido').length,
-  };
+    const resultado = procesarVenta(medicamentoSeleccionado, cantidadVenta, data.lotes);
+    setMensajeVenta(resultado.mensaje);
 
-  const getEstadoColor = (estado: string) => {
-    switch (estado) {
-      case 'ok':
-        return 'bg-green-100 text-green-800';
-      case 'proximo':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'vencido':
-        return 'bg-red-100 text-red-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
+    if (resultado.exito) {
+      updateLotes(resultado.lotesActualizados);
+      window.setTimeout(() => {
+        setMedicamentoSeleccionado(null);
+        setCantidadVenta(1);
+        setMensajeVenta('');
+      }, 1800);
     }
   };
 
-  const getEstadoTexto = (estado: string, diasRestantes: number | null) => {
-    switch (estado) {
-      case 'ok':
-        return 'OK';
-      case 'proximo':
-        return `Vence en ${diasRestantes} días`;
-      case 'vencido':
-        return 'VENCIDO';
-      default:
-        return 'Sin lotes';
+  const handleAddMedicamento = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (!medForm.nombre.trim() || medForm.precioVenta < 0 || medForm.precioCompra < 0) {
+      return;
     }
+
+    const nuevo = addMedicamento(medForm);
+    setMedForm({
+      nombre: '',
+      proveedor: '',
+      precioCompra: 0,
+      precioVenta: 0,
+    });
+    setLoteForm((current) => ({ ...current, medicamentoId: nuevo.id }));
+  };
+
+  const handleAddLote = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (!loteForm.medicamentoId || !loteForm.numeroLote.trim() || !loteForm.fechaVencimiento || loteForm.cantidadDisponible <= 0) {
+      return;
+    }
+
+    addLote(loteForm);
+    setLoteForm({
+      medicamentoId: loteForm.medicamentoId,
+      numeroLote: '',
+      fechaVencimiento: '',
+      cantidadDisponible: 0,
+    });
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Control de Medicamentos</h1>
-        <p className="mt-2 text-sm text-gray-600">
-          Gestión de stock, lotes y fechas de vencimiento
+    <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
+      <section className="rounded-[2rem] border border-white/10 bg-white/5 p-5 shadow-xl shadow-slate-950/20 sm:p-6">
+        <p className="text-xs uppercase tracking-[0.35em] text-cyan-300">Medicamentos</p>
+        <h1 className="mt-3 text-3xl font-semibold text-white">Stock y vencimientos</h1>
+        <p className="mt-3 text-sm leading-6 text-slate-300">
+          Ahora podés cargar medicamentos, agregar lotes, descontar ventas y borrar registros desde el mismo módulo.
         </p>
-      </div>
+        <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <div className="rounded-2xl border border-white/10 bg-slate-950/40 p-4">
+            <p className="text-sm text-slate-400">Productos</p>
+            <p className="mt-1 text-2xl font-semibold text-white">{data.medicamentos.length}</p>
+          </div>
+          <div className="rounded-2xl border border-white/10 bg-slate-950/40 p-4">
+            <p className="text-sm text-slate-400">Stock total</p>
+            <p className="mt-1 text-2xl font-semibold text-white">{medicamentosConInfo.reduce((sum, item) => sum + item.stockTotal, 0)}</p>
+          </div>
+          <div className="rounded-2xl border border-white/10 bg-slate-950/40 p-4">
+            <p className="text-sm text-slate-400">Por vencer</p>
+            <p className="mt-1 text-2xl font-semibold text-white">{medicamentosConInfo.filter((item) => item.estado === 'proximo').length}</p>
+          </div>
+          <div className="rounded-2xl border border-white/10 bg-slate-950/40 p-4">
+            <p className="text-sm text-slate-400">Vencidos</p>
+            <p className="mt-1 text-2xl font-semibold text-white">{medicamentosConInfo.filter((item) => item.estado === 'vencido').length}</p>
+          </div>
+        </div>
+      </section>
 
-      {/* Estadísticas */}
-      <div className="grid grid-cols-1 gap-5 sm:grid-cols-4 mb-8">
-        <div className="bg-white overflow-hidden shadow-sm rounded-lg border border-gray-200 px-4 py-5">
-          <dt className="text-sm font-medium text-gray-500 truncate">
-            Total Medicamentos
-          </dt>
-          <dd className="mt-1 text-3xl font-semibold text-gray-900">
-            {estadisticas.totalMedicamentos}
-          </dd>
-        </div>
-        <div className="bg-white overflow-hidden shadow-sm rounded-lg border border-gray-200 px-4 py-5">
-          <dt className="text-sm font-medium text-gray-500 truncate">
-            Stock Total
-          </dt>
-          <dd className="mt-1 text-3xl font-semibold text-primary-600">
-            {estadisticas.stockTotal}
-          </dd>
-        </div>
-        <div className="bg-white overflow-hidden shadow-sm rounded-lg border border-gray-200 px-4 py-5">
-          <dt className="text-sm font-medium text-gray-500 truncate">
-            Por Vencer
-          </dt>
-          <dd className="mt-1 text-3xl font-semibold text-yellow-600">
-            {estadisticas.porVencer}
-          </dd>
-        </div>
-        <div className="bg-white overflow-hidden shadow-sm rounded-lg border border-gray-200 px-4 py-5">
-          <dt className="text-sm font-medium text-gray-500 truncate">
-            Vencidos
-          </dt>
-          <dd className="mt-1 text-3xl font-semibold text-red-600">
-            {estadisticas.vencidos}
-          </dd>
-        </div>
-      </div>
-
-      {/* Tabla de medicamentos */}
-      <div className="bg-white shadow-sm rounded-lg border border-gray-200 overflow-hidden mb-8">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h2 className="text-lg font-semibold text-gray-900">
-            Inventario de Medicamentos
-          </h2>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Medicamento
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Proveedor
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Stock Total
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Próximo Vencimiento
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Estado
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Precios
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Acciones
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {medicamentosConInfo.map((medicamento) => (
-                <tr key={medicamento.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">
-                      {medicamento.nombre}
-                    </div>
-                    <div className="text-xs text-gray-500">{medicamento.id}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {medicamento.proveedor}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-semibold text-gray-900">
-                      {medicamento.stockTotal} unidades
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {medicamento.proximoVencimiento
-                      ? formatearFecha(medicamento.proximoVencimiento)
-                      : 'Sin lotes'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span
-                      className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getEstadoColor(
-                        medicamento.estado
-                      )}`}
-                    >
-                      {getEstadoTexto(medicamento.estado, medicamento.diasRestantes)}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    <div>Compra: ${medicamento.precioCompra}</div>
-                    <div className="text-green-600 font-medium">
-                      Venta: ${medicamento.precioVenta}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm">
+      <section className="mt-6 grid gap-6 xl:grid-cols-[1fr_0.95fr]">
+        <div className="space-y-3">
+          {medicamentosConInfo.length === 0 ? (
+            <div className="rounded-[2rem] border border-dashed border-white/10 bg-white/5 p-6 text-sm text-slate-400">
+              No hay medicamentos cargados todavía.
+            </div>
+          ) : (
+            medicamentosConInfo.map((medicamento) => (
+              <article key={medicamento.id} className="rounded-[2rem] border border-white/10 bg-white/5 p-5 shadow-lg shadow-slate-950/20">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-sm text-slate-400">{medicamento.id}</p>
+                    <h2 className="mt-1 text-xl font-semibold text-white">{medicamento.nombre}</h2>
+                    <p className="mt-2 text-sm text-slate-300">{medicamento.proveedor || 'Sin proveedor'}</p>
+                  </div>
+                  <div className="flex flex-col gap-2">
                     <button
-                      onClick={() => abrirModalVenta(medicamento.id)}
+                      type="button"
+                      onClick={() => {
+                        setMedicamentoSeleccionado(medicamento.id);
+                        setCantidadVenta(1);
+                        setMensajeVenta('');
+                      }}
                       disabled={medicamento.stockTotal === 0}
-                      className={`inline-flex items-center px-3 py-1 border border-transparent text-xs font-medium rounded-md ${
-                        medicamento.stockTotal > 0
-                          ? 'text-white bg-primary-600 hover:bg-primary-700'
-                          : 'text-gray-400 bg-gray-200 cursor-not-allowed'
-                      }`}
+                      className={
+                        'rounded-2xl px-4 py-2 text-sm font-semibold transition ' +
+                        (medicamento.stockTotal > 0
+                          ? 'bg-cyan-400 text-slate-950 hover:bg-cyan-300'
+                          : 'bg-slate-800 text-slate-500')
+                      }
                     >
                       Vender
                     </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* Detalle de lotes */}
-      <div className="bg-white shadow-sm rounded-lg border border-gray-200 overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h2 className="text-lg font-semibold text-gray-900">
-            Detalle de Lotes por Medicamento
-          </h2>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Medicamento
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Número de Lote
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Cantidad
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Fecha Vencimiento
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Días Restantes
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Estado
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {lotes.map((lote) => {
-                const medicamento = medicamentos.find(m => m.id === lote.medicamentoId);
-                const diasRestantes = calcularDiasHastaVencimiento(lote.fechaVencimiento);
-                const estado = obtenerEstadoVencimiento(lote.fechaVencimiento);
-
-                return (
-                  <tr key={lote.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      {medicamento?.nombre}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {lote.numeroLote}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="text-sm font-semibold text-gray-900">
-                        {lote.cantidadDisponible}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {formatearFecha(lote.fechaVencimiento)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span
-                        className={`text-sm font-medium ${
-                          diasRestantes < 0
-                            ? 'text-red-600'
-                            : diasRestantes <= 60
-                            ? 'text-yellow-600'
-                            : 'text-green-600'
-                        }`}
-                      >
-                        {diasRestantes < 0 ? `Vencido hace ${Math.abs(diasRestantes)} días` : `${diasRestantes} días`}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span
-                        className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getEstadoColor(
-                          estado
-                        )}`}
-                      >
-                        {estado === 'ok' ? 'OK' : estado === 'proximo' ? 'Por vencer' : 'VENCIDO'}
-                      </span>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* Modal de venta */}
-      {mostrarModalVenta && medicamentoSeleccionado && (
-        <div className="fixed z-10 inset-0 overflow-y-auto">
-          <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-            <div
-              className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"
-              onClick={() => setMostrarModalVenta(false)}
-            ></div>
-
-            <div className="inline-block align-bottom bg-white rounded-lg px-4 pt-5 pb-4 text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full sm:p-6">
-              <div>
-                <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">
-                  Procesar Venta
-                </h3>
-                <div className="mb-4">
-                  <p className="text-sm text-gray-600">
-                    Medicamento:{' '}
-                    <span className="font-medium text-gray-900">
-                      {medicamentos.find(m => m.id === medicamentoSeleccionado)?.nombre}
-                    </span>
-                  </p>
-                  <p className="text-sm text-gray-600 mt-1">
-                    Stock disponible:{' '}
-                    <span className="font-medium text-gray-900">
-                      {calcularStockTotal(medicamentoSeleccionado, lotes)} unidades
-                    </span>
-                  </p>
-                  <p className="text-xs text-gray-500 mt-2">
-                    La venta se procesa usando FIFO (primero en vencer, primero en salir)
-                  </p>
-                </div>
-                <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Cantidad a vender
-                  </label>
-                  <input
-                    type="number"
-                    min="1"
-                    value={cantidadVenta}
-                    onChange={(e) => setCantidadVenta(Number(e.target.value))}
-                    className="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                  />
-                </div>
-                {mensajeVenta && (
-                  <div
-                    className={`mb-4 p-3 rounded-md ${
-                      mensajeVenta.tipo === 'success'
-                        ? 'bg-green-50 text-green-800 border border-green-200'
-                        : 'bg-red-50 text-red-800 border border-red-200'
-                    }`}
-                  >
-                    <p className="text-sm">{mensajeVenta.texto}</p>
+                    <button type="button" onClick={() => deleteMedicamento(medicamento.id)} className="rounded-2xl border border-rose-400/20 bg-rose-400/10 px-4 py-2 text-sm font-medium text-rose-200">
+                      Borrar
+                    </button>
                   </div>
-                )}
+                </div>
+                <div className="mt-4 grid grid-cols-2 gap-3 text-sm text-slate-300 sm:grid-cols-4">
+                  <div>
+                    <p className="text-slate-500">Stock</p>
+                    <p className="mt-1">{medicamento.stockTotal}</p>
+                  </div>
+                  <div>
+                    <p className="text-slate-500">Vence</p>
+                    <p className="mt-1">{medicamento.proximoVencimiento ? formatearFecha(medicamento.proximoVencimiento) : 'Sin lotes'}</p>
+                  </div>
+                  <div>
+                    <p className="text-slate-500">Compra</p>
+                    <p className="mt-1">{'$' + medicamento.precioCompra}</p>
+                  </div>
+                  <div>
+                    <p className="text-slate-500">Venta</p>
+                    <p className="mt-1">{'$' + medicamento.precioVenta}</p>
+                  </div>
+                </div>
+                <div className="mt-4 rounded-2xl border border-white/10 bg-slate-950/40 p-4 text-sm text-slate-300">
+                  <p>
+                    Estado:{' '}
+                    {medicamento.estado === 'ok'
+                      ? 'OK'
+                      : medicamento.estado === 'proximo'
+                      ? 'Vence en ' + medicamento.diasRestantes + ' días'
+                      : 'Vencido'}
+                  </p>
+                </div>
+              </article>
+            ))
+          )}
+        </div>
+
+        <div className="space-y-6">
+          <form onSubmit={handleAddMedicamento} className="rounded-[2rem] border border-white/10 bg-slate-900/70 p-5 shadow-xl shadow-slate-950/20 sm:p-6">
+            <h2 className="text-xl font-semibold text-white">Agregar medicamento</h2>
+            <div className="mt-5 grid gap-4">
+              <label className="block">
+                <span className="mb-2 block text-sm text-slate-300">Nombre</span>
+                <input value={medForm.nombre} onChange={(event) => setMedForm({ ...medForm, nombre: event.target.value })} className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none focus:border-cyan-400" />
+              </label>
+              <label className="block">
+                <span className="mb-2 block text-sm text-slate-300">Proveedor</span>
+                <input value={medForm.proveedor} onChange={(event) => setMedForm({ ...medForm, proveedor: event.target.value })} className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none focus:border-cyan-400" />
+              </label>
+              <div className="grid grid-cols-2 gap-4">
+                <label className="block">
+                  <span className="mb-2 block text-sm text-slate-300">Precio compra</span>
+                  <input type="number" value={medForm.precioCompra} onChange={(event) => setMedForm({ ...medForm, precioCompra: Number(event.target.value) })} className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none focus:border-cyan-400" />
+                </label>
+                <label className="block">
+                  <span className="mb-2 block text-sm text-slate-300">Precio venta</span>
+                  <input type="number" value={medForm.precioVenta} onChange={(event) => setMedForm({ ...medForm, precioVenta: Number(event.target.value) })} className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none focus:border-cyan-400" />
+                </label>
               </div>
-              <div className="mt-5 sm:mt-6 sm:grid sm:grid-cols-2 sm:gap-3">
-                <button
-                  type="button"
-                  onClick={() => setMostrarModalVenta(false)}
-                  className="w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 sm:text-sm"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="button"
-                  onClick={procesarVentaMedicamento}
-                  className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-primary-600 text-base font-medium text-white hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 sm:text-sm"
-                >
-                  Confirmar Venta
+            </div>
+            <button type="submit" className="mt-5 w-full rounded-2xl bg-cyan-400 px-4 py-3 font-semibold text-slate-950 transition hover:bg-cyan-300">
+              Guardar medicamento
+            </button>
+          </form>
+
+          <form onSubmit={handleAddLote} className="rounded-[2rem] border border-white/10 bg-slate-900/70 p-5 shadow-xl shadow-slate-950/20 sm:p-6">
+            <h2 className="text-xl font-semibold text-white">Agregar stock</h2>
+            <div className="mt-5 grid gap-4">
+              <label className="block">
+                <span className="mb-2 block text-sm text-slate-300">Medicamento</span>
+                <select value={loteForm.medicamentoId} onChange={(event) => setLoteForm({ ...loteForm, medicamentoId: event.target.value })} className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none focus:border-cyan-400">
+                  <option value="" className="bg-slate-900">Seleccionar medicamento</option>
+                  {data.medicamentos.map((medicamento) => (
+                    <option key={medicamento.id} value={medicamento.id} className="bg-slate-900">
+                      {medicamento.nombre}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="block">
+                <span className="mb-2 block text-sm text-slate-300">Número de lote</span>
+                <input value={loteForm.numeroLote} onChange={(event) => setLoteForm({ ...loteForm, numeroLote: event.target.value })} className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none focus:border-cyan-400" />
+              </label>
+              <div className="grid grid-cols-2 gap-4">
+                <label className="block">
+                  <span className="mb-2 block text-sm text-slate-300">Vencimiento</span>
+                  <input type="date" value={loteForm.fechaVencimiento} onChange={(event) => setLoteForm({ ...loteForm, fechaVencimiento: event.target.value })} className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none focus:border-cyan-400" />
+                </label>
+                <label className="block">
+                  <span className="mb-2 block text-sm text-slate-300">Cantidad</span>
+                  <input type="number" value={loteForm.cantidadDisponible} onChange={(event) => setLoteForm({ ...loteForm, cantidadDisponible: Number(event.target.value) })} className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none focus:border-cyan-400" />
+                </label>
+              </div>
+            </div>
+            <button type="submit" className="mt-5 w-full rounded-2xl bg-cyan-400 px-4 py-3 font-semibold text-slate-950 transition hover:bg-cyan-300">
+              Guardar lote
+            </button>
+          </form>
+
+          <div className="rounded-[2rem] border border-white/10 bg-slate-900/70 p-5 shadow-xl shadow-slate-950/20 sm:p-6">
+            <h2 className="text-xl font-semibold text-white">Venta rápida</h2>
+            <p className="mt-1 text-sm text-slate-400">Se descuenta por FIFO: primero vence, primero sale.</p>
+            {medicamentoSeleccionado ? (
+              <div className="mt-5 space-y-4">
+                <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-slate-300">
+                  <p className="text-slate-500">Medicamento</p>
+                  <p className="mt-1 text-base font-semibold text-white">
+                    {data.medicamentos.find((item) => item.id === medicamentoSeleccionado)?.nombre}
+                  </p>
+                  <p className="mt-2">Stock disponible: {calcularStockTotal(medicamentoSeleccionado, data.lotes)}</p>
+                </div>
+                <label className="block">
+                  <span className="mb-2 block text-sm text-slate-300">Cantidad a vender</span>
+                  <input type="number" min="1" value={cantidadVenta} onChange={(event) => setCantidadVenta(Number(event.target.value))} className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none focus:border-cyan-400" />
+                </label>
+                {mensajeVenta ? <div className="rounded-2xl border border-white/10 bg-slate-950/40 p-4 text-sm text-slate-200">{mensajeVenta}</div> : null}
+                <button type="button" onClick={procesarVentaMedicamento} className="w-full rounded-2xl bg-cyan-400 px-4 py-3 font-semibold text-slate-950 transition hover:bg-cyan-300">
+                  Confirmar venta
                 </button>
               </div>
+            ) : (
+              <div className="mt-5 rounded-2xl border border-dashed border-white/10 bg-white/5 p-5 text-sm text-slate-400">
+                Seleccioná un medicamento para procesar la venta.
+              </div>
+            )}
+          </div>
+
+          <div className="rounded-[2rem] border border-white/10 bg-slate-900/70 p-5 shadow-xl shadow-slate-950/20 sm:p-6">
+            <h2 className="text-xl font-semibold text-white">Lotes cargados</h2>
+            <div className="mt-5 space-y-3">
+              {data.lotes.length === 0 ? (
+                <div className="rounded-2xl border border-dashed border-white/10 bg-white/5 p-5 text-sm text-slate-400">
+                  No hay lotes cargados todavía.
+                </div>
+              ) : (
+                data.lotes.map((lote) => {
+                  const medicamento = data.medicamentos.find((item) => item.id === lote.medicamentoId);
+                  const diasRestantes = calcularDiasHastaVencimiento(lote.fechaVencimiento);
+
+                  return (
+                    <div key={lote.id} className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-slate-300">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="font-medium text-white">{medicamento?.nombre}</p>
+                          <p className="mt-1 text-slate-400">Lote {lote.numeroLote}</p>
+                        </div>
+                        <button type="button" onClick={() => deleteLote(lote.id)} className="rounded-full border border-rose-400/20 bg-rose-400/10 px-3 py-1 text-xs font-medium text-rose-200">
+                          Borrar
+                        </button>
+                      </div>
+                      <div className="mt-3 grid grid-cols-2 gap-3">
+                        <div>
+                          <p className="text-slate-500">Cantidad</p>
+                          <p className="mt-1">{lote.cantidadDisponible}</p>
+                        </div>
+                        <div>
+                          <p className="text-slate-500">Vencimiento</p>
+                          <p className="mt-1">{formatearFecha(lote.fechaVencimiento)}</p>
+                        </div>
+                      </div>
+                      <p className="mt-3 text-xs text-slate-400">
+                        {diasRestantes < 0 ? 'Vencido hace ' + Math.abs(diasRestantes) + ' días' : 'Restan ' + diasRestantes + ' días'}
+                      </p>
+                    </div>
+                  );
+                })
+              )}
             </div>
           </div>
         </div>
-      )}
+      </section>
     </div>
   );
 }
