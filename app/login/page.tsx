@@ -77,9 +77,8 @@ export default function LoginPage() {
         <div className="mt-6 rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-slate-300">
           <p className="font-medium text-white">Acceso inicial</p>
           <p className="mt-2">Email: {data.settings.loginEmail}</p>
-          <p className="mt-3 text-xs text-slate-400">
-            Si la contraseña ya fue cambiada, usá la última guardada desde el dashboard.
-          </p>
+          <p>Contraseña: {data.settings.loginPassword}</p>
+          <p className="mt-3 text-xs text-slate-400">Podés usar autocompletado del navegador o copiar esta contraseña actual.</p>
         </div>
       </div>
     </div>
