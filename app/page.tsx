@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import MetricCard from '@/components/MetricCard';
 import FinancialChart from '@/components/FinancialChart';
 import { useAppData } from '@/components/AppProvider';
@@ -14,6 +14,10 @@ export default function DashboardPage() {
   const { data, updateSettings } = useAppData();
   const [settingsForm, setSettingsForm] = useState(data.settings);
   const [saveMessage, setSaveMessage] = useState('');
+
+  useEffect(() => {
+    setSettingsForm(data.settings);
+  }, [data.settings]);
 
   const tramitesActivos = data.tramites.filter((tramite) => tramite.estado === 'En proceso').length;
   const comisionesMes = data.tramites
@@ -109,9 +113,10 @@ export default function DashboardPage() {
             <label className="block">
               <span className="mb-2 block text-sm text-slate-300">Contraseña</span>
               <input
-                type="text"
+                type="password"
                 value={settingsForm.loginPassword}
                 onChange={(event) => setSettingsForm({ ...settingsForm, loginPassword: event.target.value })}
+                autoComplete="new-password"
                 className="w-full rounded-2xl border border-white/10 bg-slate-950/50 px-4 py-3 outline-none focus:border-cyan-400"
               />
             </label>

@@ -1,15 +1,19 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAppData } from '@/components/AppProvider';
 
 export default function LoginPage() {
   const router = useRouter();
   const { data, login } = useAppData();
-  const [email, setEmail] = useState(data.settings.loginEmail);
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    setEmail(data.settings.loginEmail);
+  }, [data.settings.loginEmail]);
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -41,6 +45,7 @@ export default function LoginPage() {
               type="email"
               value={email}
               onChange={(event) => setEmail(event.target.value)}
+              autoComplete="username"
               className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none transition focus:border-cyan-400 focus:bg-white/10"
               placeholder="admin@gestor.com"
             />
@@ -51,8 +56,9 @@ export default function LoginPage() {
               type="password"
               value={password}
               onChange={(event) => setPassword(event.target.value)}
+              autoComplete="current-password"
               className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none transition focus:border-cyan-400 focus:bg-white/10"
-              placeholder="123456"
+              placeholder="Ingresá tu contraseña"
             />
           </label>
           {error ? (
@@ -71,8 +77,9 @@ export default function LoginPage() {
         <div className="mt-6 rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-slate-300">
           <p className="font-medium text-white">Acceso inicial</p>
           <p className="mt-2">Email: {data.settings.loginEmail}</p>
-          <p>Contraseña: {data.settings.loginPassword}</p>
-          <p className="mt-3 text-xs text-slate-400">Podés cambiar estas credenciales desde el dashboard una vez dentro.</p>
+          <p className="mt-3 text-xs text-slate-400">
+            Si la contraseña ya fue cambiada, usá la última guardada desde el dashboard.
+          </p>
         </div>
       </div>
     </div>
