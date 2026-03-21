@@ -1,27 +1,25 @@
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
-import { AppProvider } from '@/components/AppProvider';
-import AppShell from '@/components/AppShell';
+import Navigation from '@/components/Navigation';
+import { getCurrentUserContext } from '@/lib/auth/session';
 
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
   title: 'Gestor Previsional',
-  description: 'Panel con login y persistencia local para gestión de clientes, trámites y caja.',
+  description: 'Sistema previsional con autenticación real, PostgreSQL y operaciones server-side.',
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const user = await getCurrentUserContext();
+  const isLoggedIn = user !== null;
+
   return (
     <html lang="es">
-      <body className={inter.className}>
-        <AppProvider>
-          <AppShell>{children}</AppShell>
-        </AppProvider>
+      <body className={inter.className + ' min-h-screen bg-slate-950 text-slate-100'}>
+        {isLoggedIn ? <Navigation businessName={user.businessName} ownerName={user.ownerName} /> : null}
+        <main className={isLoggedIn ? 'pb-24 md:pb-10' : ''}>{children}</main>
       </body>
     </html>
   );
