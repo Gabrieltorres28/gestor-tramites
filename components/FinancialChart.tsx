@@ -30,7 +30,7 @@ export default function FinancialChart({ data, title }: FinancialChartProps) {
       <div className="mb-4 flex items-start justify-between gap-3">
         <div>
           <h3 className="text-lg font-semibold text-white">{title}</h3>
-          <p className="text-sm text-slate-400">Ingresos, egresos y resultado por mes.</p>
+          <p className="text-sm text-slate-400">Evolución mensual de ingresos, egresos y resultado.</p>
         </div>
       </div>
 
@@ -86,7 +86,7 @@ export default function FinancialChart({ data, title }: FinancialChartProps) {
         </>
       ) : (
         <div className="rounded-2xl border border-dashed border-white/10 bg-white/5 p-8 text-center text-sm text-slate-400">
-          Todavía no hay movimientos cargados. El gráfico se completa automáticamente con los datos reales del cliente.
+          Todavía no hay movimientos registrados. Cuando empieces a operar, acá vas a ver la evolución del negocio.
         </div>
       )}
     </div>

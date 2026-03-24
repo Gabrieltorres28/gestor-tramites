@@ -27,12 +27,12 @@ export default async function DashboardPage() {
   return (
     <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
       <section className="rounded-[2rem] border border-white/10 bg-white/5 p-5 shadow-2xl shadow-slate-950/20 sm:p-6">
-        <p className="text-xs uppercase tracking-[0.35em] text-cyan-300">Resumen general</p>
+        <p className="text-xs uppercase tracking-[0.35em] text-cyan-300">Vista general</p>
         <div className="mt-4 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div>
-            <h1 className="text-3xl font-semibold tracking-tight text-white sm:text-4xl">Sistema previsional listo para operar en serio.</h1>
+            <h1 className="text-3xl font-semibold tracking-tight text-white sm:text-4xl">Todo el estudio en un solo panel.</h1>
             <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-300 sm:text-base">
-              PostgreSQL como fuente de verdad, Supabase Auth para acceso real y operaciones sensibles resueltas del lado servidor.
+              Seguí el estado del negocio, ordená la operación diaria y tomá decisiones con información clara.
             </p>
           </div>
           <div className="grid grid-cols-2 gap-3 text-sm text-slate-300">
@@ -44,25 +44,25 @@ export default async function DashboardPage() {
 
       <section className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
         <MetricCard title="Caja actual" value={formatCurrency(dashboard.metrics.cajaActual)} subtitle="Saldo disponible" />
-        <MetricCard title="Comisiones" value={formatCurrency(dashboard.metrics.comisiones)} subtitle="Total generado" />
-        <MetricCard title="Trámites activos" value={String(dashboard.metrics.tramitesActivos)} subtitle="En curso" />
-        <MetricCard title="Ganancia mensual" value={formatCurrency(dashboard.metrics.gananciaMensual)} subtitle="Cobrado" />
+        <MetricCard title="Comisiones" value={formatCurrency(dashboard.metrics.comisiones)} subtitle="Rendimiento acumulado" />
+        <MetricCard title="Trámites activos" value={String(dashboard.metrics.tramitesActivos)} subtitle="Seguimiento activo" />
+        <MetricCard title="Ganancia mensual" value={formatCurrency(dashboard.metrics.gananciaMensual)} subtitle="Resultado del período" />
         <MetricCard title="Por vencer" value={String(dashboard.metrics.medicamentosPorVencer)} subtitle="Medicamentos" />
-        <MetricCard title="Vencidos" value={String(dashboard.metrics.medicamentosVencidos)} subtitle="Requieren control" />
+        <MetricCard title="Vencidos" value={String(dashboard.metrics.medicamentosVencidos)} subtitle="Para revisar" />
       </section>
 
       <section className="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-[1.35fr_0.95fr]">
-        <FinancialChart data={dashboard.chartData} title="Rendimiento financiero" />
+        <FinancialChart data={dashboard.chartData} title="Panorama del negocio" />
         <form action={saveSettings} className="rounded-[2rem] border border-white/10 bg-white/5 p-5 shadow-xl shadow-slate-950/20 sm:p-6">
           <h2 className="text-xl font-semibold text-white">Datos del estudio</h2>
-          <p className="mt-1 text-sm text-slate-400">Configuración central persistida en base de datos.</p>
+          <p className="mt-1 text-sm text-slate-400">Actualizá los datos principales del estudio y mantené tu operación alineada.</p>
           <div className="mt-5 space-y-4">
             <label className="block"><span className="mb-2 block text-sm text-slate-300">Nombre del negocio</span><input name="businessName" defaultValue={dashboard.settings.businessName} className="w-full rounded-2xl border border-white/10 bg-slate-950/50 px-4 py-3 outline-none focus:border-cyan-400" /></label>
             <label className="block"><span className="mb-2 block text-sm text-slate-300">Responsable</span><input name="ownerName" defaultValue={dashboard.settings.ownerName} className="w-full rounded-2xl border border-white/10 bg-slate-950/50 px-4 py-3 outline-none focus:border-cyan-400" /></label>
             <label className="block"><span className="mb-2 block text-sm text-slate-300">Comisión por defecto</span><input type="number" name="defaultCommissionRate" defaultValue={dashboard.settings.defaultCommissionRate} className="w-full rounded-2xl border border-white/10 bg-slate-950/50 px-4 py-3 outline-none focus:border-cyan-400" /></label>
           </div>
           <div className="mt-5 flex items-center justify-between gap-3">
-            <p className="text-sm text-slate-400">{user.role === UserRole.ADMIN ? "Solo admin puede editar esta sección." : "Modo lectura para operador."}</p>
+            <p className="text-sm text-slate-400">{user.role === UserRole.ADMIN ? "Perfil con permisos para editar esta sección." : "Perfil con acceso de consulta."}</p>
             <button type="submit" disabled={user.role === UserRole.OPERATOR} className="rounded-2xl bg-cyan-400 px-5 py-3 font-semibold text-slate-950 transition hover:bg-cyan-300 disabled:cursor-not-allowed disabled:opacity-60">Guardar</button>
           </div>
         </form>

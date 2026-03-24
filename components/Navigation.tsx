@@ -25,7 +25,7 @@ export default function Navigation({ businessName, ownerName }: NavigationProps)
       <header className="sticky top-0 z-40 border-b border-white/10 bg-slate-950/90 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-4 sm:px-6 lg:px-8">
           <div className="min-w-0">
-            <p className="text-[11px] uppercase tracking-[0.3em] text-cyan-300">Panel seguro</p>
+            <p className="text-[11px] uppercase tracking-[0.3em] text-cyan-300">Panel de gestión</p>
             <h1 className="truncate text-base font-semibold text-white sm:text-lg">{businessName}</h1>
             <p className="truncate text-xs text-slate-400">{ownerName}</p>
           </div>

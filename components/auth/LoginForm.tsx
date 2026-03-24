@@ -20,7 +20,7 @@ export default function LoginForm() {
         const parsed = loginSchema.safeParse({ email, password });
 
         if (parsed.success === false) {
-          setError(parsed.error.issues[0]?.message || 'Datos inválidos.');
+          setError(parsed.error.issues[0]?.message || 'Revisá los datos e intentá nuevamente.');
           return;
         }
 
@@ -29,7 +29,7 @@ export default function LoginForm() {
           const { error: loginError } = await supabase.auth.signInWithPassword(parsed.data);
 
           if (loginError) {
-            setError(loginError.message);
+            setError('No pudimos iniciar sesión. Verificá tu email y contraseña.');
             return;
           }
 
@@ -58,7 +58,7 @@ export default function LoginForm() {
           onChange={(event) => setPassword(event.target.value)}
           autoComplete="current-password"
           className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none transition focus:border-cyan-400 focus:bg-white/10"
-          placeholder="Ingresá tu contraseña"
+          placeholder="Escribí tu contraseña"
         />
       </label>
       {error ? (
@@ -71,7 +71,7 @@ export default function LoginForm() {
         disabled={pending}
         className="w-full rounded-2xl bg-cyan-400 px-4 py-3 font-semibold text-slate-950 transition hover:bg-cyan-300 disabled:cursor-not-allowed disabled:opacity-60"
       >
-        {pending ? 'Ingresando...' : 'Ingresar al panel'}
+        {pending ? 'Ingresando...' : 'Entrar al panel'}
       </button>
     </form>
   );
