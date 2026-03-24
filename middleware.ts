@@ -1,48 +1,89 @@
-import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
-import { getSupabaseAnonKey, getSupabaseUrl } from '@/lib/env';
 
-type CookieToSet = {
-  name: string;
-  value: string;
-  options: CookieOptions;
-};
+function isPublicPath(pathname: string) {
+  return (
+    pathname.startsWith('/_next') ||
+    pathname.startsWith('/api') ||
+    pathname === '/favicon.ico' ||
+    pathname === '/robots.txt' ||
+    pathname === '/sitemap.xml'
+  );
+}
 
-export async function middleware(request: NextRequest) {
-  let response = NextResponse.next({ request });
+function hasSupabaseSessionCookie(request: NextRequest) {
+  const cookies = request.cookies?.getAll?.() ?? [];
 
-  const supabase = createServerClient(getSupabaseUrl(), getSupabaseAnonKey(), {
-    cookies: {
-      getAll() {
-        return request.cookies.getAll();
-      },
-      setAll(cookieValues: CookieToSet[]) {
-        cookieValues.forEach(({ name, value }) => request.cookies.set(name, value));
-        response = NextResponse.next({ request });
-        cookieValues.forEach(({ name, value, options }) => response.cookies.set(name, value, options));
-      },
-    },
+  return cookies.some((cookie) => {
+    const name = cookie?.name ?? '';
+    return name.startsWith('sb-') && name.includes('auth-token');
+  });
+}
+
+export function middleware(request: NextRequest) {
+  const pathname = request.nextUrl?.pathname ?? '/';
+
+  console.log('[middleware] enter', {
+    pathname,
+    method: request.method,
   });
 
-  const { data } = await supabase.auth.getUser();
-  const pathname = request.nextUrl.pathname;
-  const isLoginPage = pathname === '/login';
-  const isAuthPage = pathname.startsWith('/auth');
-  const isPublicAsset = pathname.startsWith('/_next') || pathname === '/favicon.ico';
+  try {
+    if (isPublicPath(pathname)) {
+      console.log('[middleware] public path, skipping', { pathname });
+      return NextResponse.next();
+    }
 
-  if (isPublicAsset) {
-    return response;
+    const isLoginPage = pathname === '/login';
+    const isAuthPage = pathname.startsWith('/auth');
+    const hasSession = hasSupabaseSessionCookie(request);
+    const cookieNames = (request.cookies?.getAll?.() ?? []).map((cookie) => cookie?.name ?? '');
+
+    console.log('[middleware] cookies read', {
+      pathname,
+      hasSession,
+      cookieNames,
+    });
+
+    if (hasSession && isLoginPage) {
+      const redirectUrl = request.nextUrl.clone();
+      redirectUrl.pathname = '/';
+      redirectUrl.search = '';
+
+      console.log('[middleware] redirect authenticated user away from login', {
+        from: pathname,
+        to: redirectUrl.toString(),
+      });
+
+      return NextResponse.redirect(redirectUrl);
+    }
+
+    if (!hasSession && !isLoginPage && !isAuthPage) {
+      const redirectUrl = request.nextUrl.clone();
+      redirectUrl.pathname = '/login';
+      redirectUrl.search = '';
+
+      console.log('[middleware] redirect unauthenticated user to login', {
+        from: pathname,
+        to: redirectUrl.toString(),
+      });
+
+      return NextResponse.redirect(redirectUrl);
+    }
+
+    console.log('[middleware] allow request', {
+      pathname,
+      hasSession,
+    });
+
+    return NextResponse.next();
+  } catch (error) {
+    console.error('[middleware] crash', {
+      pathname,
+      error: error instanceof Error ? { message: error.message, stack: error.stack } : error,
+    });
+
+    return NextResponse.next();
   }
-
-  if (data.user && isLoginPage) {
-    return NextResponse.redirect(new URL('/', request.url));
-  }
-
-  if (!data.user && isLoginPage === false && isAuthPage === false) {
-    return NextResponse.redirect(new URL('/login', request.url));
-  }
-
-  return response;
 }
 
 export const config = {
