@@ -4,17 +4,41 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import LogoutButton from '@/components/auth/LogoutButton';
 
+function HomeIcon() {
+  return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-5 w-5"><path d="M3 10.5 12 3l9 7.5" /><path d="M5.25 9.75V21h13.5V9.75" /><path d="M9.75 21v-6h4.5v6" /></svg>;
+}
+
+function ClientsIcon() {
+  return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-5 w-5"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>;
+}
+
+function ProceduresIcon() {
+  return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-5 w-5"><path d="M8 7h12" /><path d="M8 12h12" /><path d="M8 17h12" /><path d="M3 7h.01" /><path d="M3 12h.01" /><path d="M3 17h.01" /></svg>;
+}
+
+function CashIcon() {
+  return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-5 w-5"><rect x="3" y="6" width="18" height="12" rx="2" /><path d="M16 12h.01" /><path d="M7 12h4" /></svg>;
+}
+
+function StockIcon() {
+  return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-5 w-5"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z" /><path d="m3.3 7 8.7 5 8.7-5" /><path d="M12 22V12" /></svg>;
+}
+
 const navigation = [
-  { name: 'Inicio', href: '/' },
-  { name: 'Clientes', href: '/clientes' },
-  { name: 'Trámites', href: '/tramites' },
-  { name: 'Caja', href: '/libro-diario' },
-  { name: 'Stock', href: '/medicamentos' },
+  { name: 'Inicio', href: '/', icon: HomeIcon },
+  { name: 'Clientes', href: '/clientes', icon: ClientsIcon },
+  { name: 'Trámites', href: '/tramites', icon: ProceduresIcon },
+  { name: 'Caja', href: '/libro-diario', icon: CashIcon },
+  { name: 'Stock', href: '/medicamentos', icon: StockIcon },
 ];
 
 interface NavigationProps {
   businessName: string;
   ownerName: string;
+}
+
+function BrandIcon() {
+  return <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-cyan-400/15 text-cyan-300"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-5 w-5"><path d="M12 3 4 7v10l8 4 8-4V7l-8-4Z" /><path d="M12 12 4 7" /><path d="M12 12l8-5" /><path d="M12 12v9" /></svg></span>;
 }
 
 export default function Navigation({ businessName, ownerName }: NavigationProps) {
@@ -24,10 +48,13 @@ export default function Navigation({ businessName, ownerName }: NavigationProps)
     <>
       <header className="sticky top-0 z-40 border-b border-white/10 bg-slate-950/90 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-4 sm:px-6 lg:px-8">
-          <div className="min-w-0">
-            <p className="text-[11px] uppercase tracking-[0.3em] text-cyan-300">Panel de gestión</p>
-            <h1 className="truncate text-base font-semibold text-white sm:text-lg">{businessName}</h1>
-            <p className="truncate text-xs text-slate-400">{ownerName}</p>
+          <div className="flex min-w-0 items-center gap-3">
+            <BrandIcon />
+            <div className="min-w-0">
+              <p className="text-[11px] uppercase tracking-[0.3em] text-cyan-300">Panel de gestión</p>
+              <h1 className="truncate text-base font-semibold text-white sm:text-lg">{businessName}</h1>
+              <p className="truncate text-xs text-slate-400">{ownerName}</p>
+            </div>
           </div>
           <LogoutButton />
         </div>
@@ -35,14 +62,16 @@ export default function Navigation({ businessName, ownerName }: NavigationProps)
           <div className="mx-auto flex max-w-6xl gap-2 px-4 py-3 sm:px-6 lg:px-8">
             {navigation.map((item) => {
               const isActive = pathname === item.href;
+              const Icon = item.icon;
 
               return (
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={isActive ? 'rounded-full bg-cyan-400 px-4 py-2 text-sm text-slate-950 transition' : 'rounded-full px-4 py-2 text-sm text-slate-300 transition hover:bg-white/10 hover:text-white'}
+                  className={isActive ? 'inline-flex items-center gap-2 rounded-full bg-cyan-400 px-4 py-2 text-sm text-slate-950 transition' : 'inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm text-slate-300 transition hover:bg-white/10 hover:text-white'}
                 >
-                  {item.name}
+                  <Icon />
+                  <span>{item.name}</span>
                 </Link>
               );
             })}
@@ -54,14 +83,16 @@ export default function Navigation({ businessName, ownerName }: NavigationProps)
         <div className="grid grid-cols-5 gap-1">
           {navigation.map((item) => {
             const isActive = pathname === item.href;
+            const Icon = item.icon;
 
             return (
               <Link
                 key={item.href}
                 href={item.href}
-                className={isActive ? 'flex min-h-[64px] flex-col items-center justify-center rounded-2xl bg-cyan-400 px-1 text-center text-slate-950 transition' : 'flex min-h-[64px] flex-col items-center justify-center rounded-2xl px-1 text-center text-slate-400 transition hover:bg-white/5 hover:text-white'}
+                className={isActive ? 'flex min-h-[68px] flex-col items-center justify-center rounded-2xl bg-cyan-400 px-1 text-center text-slate-950 transition' : 'flex min-h-[68px] flex-col items-center justify-center rounded-2xl px-1 text-center text-slate-400 transition hover:bg-white/5 hover:text-white'}
               >
-                <span className="text-[11px] font-medium leading-tight">{item.name}</span>
+                <Icon />
+                <span className="mt-1 text-[11px] font-medium leading-tight">{item.name}</span>
               </Link>
             );
           })}

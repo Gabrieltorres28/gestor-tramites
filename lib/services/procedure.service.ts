@@ -46,7 +46,7 @@ export async function createProcedure(user: UserContext, input: unknown) {
         businessId: user.businessId,
         clientId: client.id,
         createdByUserId: user.userId,
-        type: parsed.data.type,
+        type: client.procedureType,
         status: parsed.data.status,
         amountManaged: parsed.data.amountManaged,
         commissionRate: parsed.data.commissionRate,

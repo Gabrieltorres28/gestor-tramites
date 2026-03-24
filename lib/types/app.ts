@@ -42,6 +42,7 @@ export type ProcedureListItem = {
   clientName: string;
   type: string;
   status: string;
+  statusKey: ProcedureStatus;
   amountManaged: number;
   commissionRate: number;
   commissionAmount: number;

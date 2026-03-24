@@ -15,6 +15,7 @@ export async function getProcedures(businessId: string): Promise<ProcedureListIt
     clientName: procedure.client.fullName,
     type: procedureTypeLabels[procedure.type],
     status: procedureStatusLabels[procedure.status],
+    statusKey: procedure.status,
     amountManaged: serializeDecimal(procedure.amountManaged),
     commissionRate: serializeDecimal(procedure.commissionRate),
     commissionAmount: serializeDecimal(procedure.commissionAmount),
