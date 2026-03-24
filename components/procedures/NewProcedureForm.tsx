@@ -4,6 +4,7 @@ import { ProcedureStatus, ProcedureType } from '@prisma/client';
 import { useEffect, useState } from 'react';
 import { procedureStatusLabels, procedureTypeLabels } from '@/lib/types/app';
 import SubmitButton from '@/components/ui/SubmitButton';
+import DateField from '@/components/ui/DateField';
 import { todayIso } from '@/lib/utils';
 
 type ClientOption = {
@@ -95,10 +96,7 @@ export default function NewProcedureForm({ clients, action }: NewProcedureFormPr
           />
         </label>
 
-        <label className="block sm:col-span-2">
-          <span className="mb-2 block text-sm text-slate-300">Fecha de inicio</span>
-          <input type="date" name="startedAt" defaultValue={todayIso()} className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none focus:border-cyan-400" />
-        </label>
+        <DateField label="Fecha de inicio" name="startedAt" defaultValue={todayIso()} wrapperClassName="sm:col-span-2" />
 
         <label className="block sm:col-span-2">
           <span className="mb-2 block text-sm text-slate-300">Descripción</span>
