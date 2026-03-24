@@ -3,6 +3,10 @@
 import { useState, useTransition } from 'react';
 import { createSupabaseBrowserClient } from '@/lib/supabase/client';
 
+function Spinner() {
+  return <span aria-hidden="true" className="h-4 w-4 animate-spin rounded-full border-2 border-current border-r-transparent" />;
+}
+
 export default function PasswordChangeCard() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -81,9 +85,11 @@ export default function PasswordChangeCard() {
         <button
           type="submit"
           disabled={pending}
-          className="w-full rounded-2xl border border-cyan-400/20 bg-cyan-400/10 px-4 py-3 font-semibold text-cyan-100 transition hover:bg-cyan-400/20 disabled:cursor-not-allowed disabled:opacity-60"
+          aria-busy={pending}
+          className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-cyan-400/20 bg-cyan-400/10 px-4 py-3 font-semibold text-cyan-100 transition hover:bg-cyan-400/20 disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {pending ? 'Actualizando...' : 'Actualizar contraseña'}
+          {pending ? <Spinner /> : null}
+          <span>{pending ? 'Actualizando...' : 'Actualizar contraseña'}</span>
         </button>
       </form>
     </section>

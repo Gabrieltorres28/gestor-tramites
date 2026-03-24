@@ -6,6 +6,7 @@ import { requireUserContext } from '@/lib/auth/session';
 import { getClients } from '@/lib/data/clients';
 import { createClient, deleteClient } from '@/lib/services/client.service';
 import FeedbackBanner from '@/components/FeedbackBanner';
+import SubmitButton from '@/components/ui/SubmitButton';
 import { procedureTypeLabels } from '@/lib/types/app';
 
 export default async function ClientesPage() {
@@ -76,14 +77,14 @@ export default async function ClientesPage() {
             <label className="block"><span className="mb-2 block text-sm text-slate-300">Email (opcional)</span><input name="email" type="email" className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none focus:border-cyan-400" /></label>
             <label className="block sm:col-span-2"><span className="mb-2 block text-sm text-slate-300">Notas</span><textarea name="notes" rows={4} className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none focus:border-cyan-400" /></label>
           </div>
-          <button type="submit" className="mt-5 w-full rounded-2xl bg-cyan-400 px-4 py-3 font-semibold text-slate-950 transition hover:bg-cyan-300">Guardar cliente</button>
+          <SubmitButton pendingText="Guardando cliente..." className="mt-5 w-full rounded-2xl bg-cyan-400 px-4 py-3 font-semibold text-slate-950 transition hover:bg-cyan-300">Guardar cliente</SubmitButton>
         </form>
       </section>
 
       <section className="mt-6 space-y-3">
         {clients.map((client) => (
           <article key={client.id} className="rounded-[2rem] border border-white/10 bg-white/5 p-5 shadow-lg shadow-slate-950/20">
-            <div className="flex items-start justify-between gap-3"><div><p className="text-sm text-slate-400">{client.dni}</p><h2 className="mt-1 text-xl font-semibold text-white">{client.fullName}</h2></div><div className="flex items-center gap-2"><span className="rounded-full border border-cyan-400/20 bg-cyan-400/10 px-3 py-1 text-xs font-medium text-cyan-200">{client.status}</span><form action={removeClientAction}><input type="hidden" name="clientId" value={client.id} /><button type="submit" className="rounded-full border border-rose-400/20 bg-rose-400/10 px-3 py-1 text-xs font-medium text-rose-200">Borrar</button></form></div></div>
+            <div className="flex items-start justify-between gap-3"><div><p className="text-sm text-slate-400">{client.dni}</p><h2 className="mt-1 text-xl font-semibold text-white">{client.fullName}</h2></div><div className="flex items-center gap-2"><span className="rounded-full border border-cyan-400/20 bg-cyan-400/10 px-3 py-1 text-xs font-medium text-cyan-200">{client.status}</span><form action={removeClientAction}><input type="hidden" name="clientId" value={client.id} /><SubmitButton pendingText="Borrando..." className="rounded-full border border-rose-400/20 bg-rose-400/10 px-3 py-1 text-xs font-medium text-rose-200">Borrar</SubmitButton></form></div></div>
             <div className="mt-4 grid grid-cols-2 gap-3 text-sm text-slate-300 sm:grid-cols-4"><div><p className="text-slate-500">Trámite</p><p className="mt-1">{client.procedureType}</p></div><div><p className="text-slate-500">Comisión</p><p className="mt-1">{client.commissionRate}%</p></div><div><p className="text-slate-500">Teléfono</p><p className="mt-1">{client.phone || 'Sin dato'}</p></div><div><p className="text-slate-500">Alta</p><p className="mt-1">{client.createdAt}</p></div></div>
             <div className="mt-4 rounded-2xl border border-white/10 bg-slate-950/40 p-4 text-sm text-slate-300"><p><span className="text-slate-500">Email:</span> {client.email || 'Sin dato'}</p><p className="mt-2"><span className="text-slate-500">Notas:</span> {client.notes || 'Sin notas'}</p></div>
           </article>

@@ -3,6 +3,7 @@
 import { ProcedureStatus, ProcedureType } from '@prisma/client';
 import { useEffect, useState } from 'react';
 import { procedureStatusLabels, procedureTypeLabels } from '@/lib/types/app';
+import SubmitButton from '@/components/ui/SubmitButton';
 import { todayIso } from '@/lib/utils';
 
 type ClientOption = {
@@ -104,9 +105,9 @@ export default function NewProcedureForm({ clients, action }: NewProcedureFormPr
           <textarea name="description" rows={4} className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none focus:border-cyan-400" />
         </label>
       </div>
-      <button type="submit" className="mt-5 w-full rounded-2xl bg-cyan-400 px-4 py-3 font-semibold text-slate-950 transition hover:bg-cyan-300">
+      <SubmitButton pendingText="Guardando trámite..." className="mt-5 w-full rounded-2xl bg-cyan-400 px-4 py-3 font-semibold text-slate-950 transition hover:bg-cyan-300">
         Guardar trámite
-      </button>
+      </SubmitButton>
     </form>
   );
 }

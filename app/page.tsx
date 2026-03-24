@@ -6,6 +6,7 @@ import { requireUserContext } from "@/lib/auth/session";
 import { getDashboardData } from "@/lib/data/dashboard";
 import { updateBusinessSettings } from "@/lib/services/business-settings.service";
 import PasswordChangeCard from "@/components/account/PasswordChangeCard";
+import SubmitButton from "@/components/ui/SubmitButton";
 import { formatCurrency } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -65,7 +66,7 @@ export default async function DashboardPage() {
             </div>
             <div className="mt-5 flex items-center justify-between gap-3">
               <p className="text-sm text-slate-400">{user.role === UserRole.ADMIN ? "Perfil con permisos para editar esta sección." : "Perfil con acceso de consulta."}</p>
-              <button type="submit" disabled={user.role === UserRole.OPERATOR} className="rounded-2xl bg-cyan-400 px-5 py-3 font-semibold text-slate-950 transition hover:bg-cyan-300 disabled:cursor-not-allowed disabled:opacity-60">Guardar</button>
+              <SubmitButton pendingText="Guardando cambios..." disabled={user.role === UserRole.OPERATOR} className="rounded-2xl bg-cyan-400 px-5 py-3 font-semibold text-slate-950 transition hover:bg-cyan-300">Guardar</SubmitButton>
             </div>
           </form>
           <PasswordChangeCard />
