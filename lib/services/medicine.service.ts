@@ -19,6 +19,11 @@ export async function createMedicine(user: UserContext, input: unknown) {
       supplier: parsed.data.supplier || null,
       purchasePrice: parsed.data.purchasePrice,
       salePrice: parsed.data.salePrice,
+      prescriptionIssuedAt: parsed.data.prescriptionIssuedAt ? new Date(parsed.data.prescriptionIssuedAt) : null,
+      prescriptionDurationMonths:
+        parsed.data.prescriptionDurationMonths === '' || parsed.data.prescriptionDurationMonths === undefined
+          ? null
+          : parsed.data.prescriptionDurationMonths,
     },
   });
 

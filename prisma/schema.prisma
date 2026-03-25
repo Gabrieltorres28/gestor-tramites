@@ -157,19 +157,21 @@ model CashMovement {
 }
 
 model Medicine {
-  id               String            @id @default(cuid())
-  businessId       String
-  createdByUserId  String
-  name             String
-  supplier         String?
-  purchasePrice    Decimal           @db.Decimal(14, 2)
-  salePrice        Decimal           @db.Decimal(14, 2)
-  createdAt        DateTime          @default(now())
-  updatedAt        DateTime          @updatedAt
-  business         BusinessSettings  @relation(fields: [businessId], references: [id], onDelete: Cascade)
-  createdBy        User              @relation("MedicineCreatedBy", fields: [createdByUserId], references: [id])
-  batches          MedicineBatch[]
-  sales            MedicineSale[]
+  id                        String            @id @default(cuid())
+  businessId                String
+  createdByUserId           String
+  name                      String
+  supplier                  String?
+  purchasePrice             Decimal           @db.Decimal(14, 2)
+  salePrice                 Decimal           @db.Decimal(14, 2)
+  prescriptionIssuedAt      DateTime?
+  prescriptionDurationMonths Int?
+  createdAt                 DateTime          @default(now())
+  updatedAt                 DateTime          @updatedAt
+  business                  BusinessSettings  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  createdBy                 User              @relation("MedicineCreatedBy", fields: [createdByUserId], references: [id])
+  batches                   MedicineBatch[]
+  sales                     MedicineSale[]
 
   @@index([businessId, name])
 }
