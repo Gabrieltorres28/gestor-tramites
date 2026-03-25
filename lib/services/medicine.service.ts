@@ -1,4 +1,4 @@
-import { AuditAction } from '@prisma/client';
+import { AuditAction, Prisma } from '@prisma/client';
 import { db } from '@/lib/db';
 import { deleteBatchSchema, deleteMedicineSchema, medicineBatchSchema, medicineSaleSchema, medicineSchema } from '@/lib/schemas/medicine';
 import { createAuditLog } from '@/lib/services/audit.service';
@@ -52,16 +52,15 @@ export async function createMedicine(user: UserContext, input: unknown) {
     }
 
     console.warn('[medicine] prescription columns missing in database, creating medicine without prescription fields');
-    medicine = await db.medicine.create({
-      data: {
-        businessId: user.businessId,
-        createdByUserId: user.userId,
-        name: parsed.data.name,
-        supplier: parsed.data.supplier || null,
-        purchasePrice: parsed.data.purchasePrice,
-        salePrice: parsed.data.salePrice,
-      },
-    });
+    const insertedRows = await db.$queryRaw<Array<{ id: string }>>(Prisma.sql`
+      INSERT INTO "Medicine" ("businessId", "createdByUserId", "name", "supplier", "purchasePrice", "salePrice")
+      VALUES (${user.businessId}, ${user.userId}, ${parsed.data.name}, ${parsed.data.supplier || null}, ${parsed.data.purchasePrice}, ${parsed.data.salePrice})
+      RETURNING "id"
+    `);
+
+    medicine = {
+      id: insertedRows[0]?.id,
+    };
   }
 
   await createAuditLog({
