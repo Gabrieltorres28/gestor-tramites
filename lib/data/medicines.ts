@@ -7,12 +7,6 @@ function calculateDaysUntil(date: Date) {
   return Math.ceil(diff / (1000 * 60 * 60 * 24));
 }
 
-function addMonths(date: Date, months: number) {
-  const next = new Date(date);
-  next.setMonth(next.getMonth() + months);
-  return next;
-}
-
 function getExpirationStatus(nextExpiration?: Date) {
   if (nextExpiration === undefined) {
     return { status: 'ok' as const, days: undefined };
@@ -31,41 +25,6 @@ function getExpirationStatus(nextExpiration?: Date) {
   return { status: 'ok' as const, days };
 }
 
-function getPrescriptionStatus(issuedAt?: Date | null, durationMonths?: number | null) {
-  if (!issuedAt || !durationMonths) {
-    return {
-      status: 'none' as const,
-      expiresAt: undefined,
-      days: undefined,
-    };
-  }
-
-  const expiresAt = addMonths(issuedAt, durationMonths);
-  const days = calculateDaysUntil(expiresAt);
-
-  if (days < 0) {
-    return {
-      status: 'expired' as const,
-      expiresAt,
-      days,
-    };
-  }
-
-  if (days <= 30) {
-    return {
-      status: 'expiring' as const,
-      expiresAt,
-      days,
-    };
-  }
-
-  return {
-    status: 'active' as const,
-    expiresAt,
-    days,
-  };
-}
-
 export async function getMedicines(businessId: string): Promise<MedicineListItem[]> {
   const medicines = await db.medicine.findMany({
     where: { businessId },
@@ -81,10 +40,6 @@ export async function getMedicines(businessId: string): Promise<MedicineListItem
     const stockTotal = medicine.batches.reduce((sum, batch) => sum + batch.quantityAvailable, 0);
     const nextExpiration = medicine.batches[0]?.expirationDate;
     const expiration = getExpirationStatus(nextExpiration);
-    const prescription = getPrescriptionStatus(
-      medicine.prescriptionIssuedAt,
-      medicine.prescriptionDurationMonths,
-    );
 
     return {
       id: medicine.id,
@@ -96,11 +51,6 @@ export async function getMedicines(businessId: string): Promise<MedicineListItem
       nextExpiration: nextExpiration ? nextExpiration.toISOString() : undefined,
       expirationStatus: expiration.status,
       expirationDays: expiration.days,
-      prescriptionIssuedAt: medicine.prescriptionIssuedAt ? medicine.prescriptionIssuedAt.toISOString() : undefined,
-      prescriptionDurationMonths: medicine.prescriptionDurationMonths ?? undefined,
-      prescriptionExpiresAt: prescription.expiresAt ? prescription.expiresAt.toISOString() : undefined,
-      prescriptionStatus: prescription.status,
-      prescriptionDaysRemaining: prescription.days,
       batches: medicine.batches.map((batch) => ({
         id: batch.id,
         batchNumber: batch.batchNumber,

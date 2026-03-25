@@ -78,11 +78,6 @@ export type MedicineListItem = {
   nextExpiration?: string;
   expirationStatus: 'ok' | 'proximo' | 'vencido';
   expirationDays?: number;
-  prescriptionIssuedAt?: string;
-  prescriptionDurationMonths?: number;
-  prescriptionExpiresAt?: string;
-  prescriptionStatus: 'none' | 'active' | 'expiring' | 'expired';
-  prescriptionDaysRemaining?: number;
   batches: MedicineBatchItem[];
 };
 
