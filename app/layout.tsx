@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Gestor Previsional",
-  description: "Sistema previsional con autenticación real, PostgreSQL y operaciones server-side.",
+  description: "Sistema previsional para gestionar clientes, tramites, caja y medicamentos desde un solo panel.",
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
