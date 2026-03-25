@@ -24,12 +24,17 @@ function StockIcon(props: SVGProps<SVGSVGElement>) {
   return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" {...props}><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z" /><path d="m3.3 7 8.7 5 8.7-5" /><path d="M12 22V12" /></svg>;
 }
 
+function AlertsIcon(props: SVGProps<SVGSVGElement>) {
+  return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" {...props}><path d="M10.29 3.86 1.82 18A2 2 0 0 0 3.53 21h16.94A2 2 0 0 0 22.18 18l-8.47-14.14a2 2 0 0 0-3.42 0Z" /><path d="M12 9v4" /><path d="M12 17h.01" /></svg>;
+}
+
 const navigation = [
   { name: 'Inicio', href: '/', icon: HomeIcon },
   { name: 'Clientes', href: '/clientes', icon: ClientsIcon },
   { name: 'Trámites', href: '/tramites', icon: ProceduresIcon },
   { name: 'Caja', href: '/libro-diario', icon: CashIcon },
   { name: 'Stock', href: '/medicamentos', icon: StockIcon },
+  { name: 'Vigencias', href: '/vigencias', icon: AlertsIcon },
 ];
 
 interface NavigationProps {
@@ -66,7 +71,7 @@ export default function Navigation({ businessName, ownerName }: NavigationProps)
       </header>
 
       <nav className="fixed inset-x-0 bottom-0 z-50 border-t border-white/10 bg-slate-950/95 px-2 pb-[calc(env(safe-area-inset-bottom)+0.5rem)] pt-2 backdrop-blur md:hidden">
-        <div className="grid grid-cols-5 gap-1">
+        <div className="grid grid-cols-6 gap-1">
           {navigation.map((item) => (
             <NavItemLink key={item.href} href={item.href} label={item.name} icon={item.icon} mobile />
           ))}

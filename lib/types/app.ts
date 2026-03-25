@@ -1,5 +1,6 @@
 import type {
   CashMovementType,
+  ClientAlertType,
   PaymentMethod,
   ProcedureStatus,
   ProcedureType,
@@ -34,6 +35,11 @@ export type ClientListItem = {
   procedureType: string;
   commissionRate: number;
   createdAt: string;
+  activeAlertsCount: number;
+  nextAlertTitle: string;
+  nextAlertDate: string;
+  nextAlertStatus: 'active' | 'expiring' | 'expired' | 'resolved' | 'none';
+  nextAlertStatusLabel: string;
 };
 
 export type ProcedureListItem = {
@@ -89,6 +95,24 @@ export type MedicineListItem = {
   batches: MedicineBatchItem[];
 };
 
+export type ClientAlertListItem = {
+  id: string;
+  clientId: string;
+  clientName: string;
+  clientProcedureType: ProcedureType;
+  typeKey: ClientAlertType;
+  typeLabel: string;
+  title: string;
+  notes: string;
+  startsAt: string;
+  expiresAt: string;
+  createdAt: string;
+  resolvedAt: string;
+  status: 'active' | 'expiring' | 'expired' | 'resolved';
+  statusLabel: string;
+  daysRemaining: number | null;
+};
+
 export const procedureTypeLabels: Record<ProcedureType, string> = {
   RETIREMENT: 'Jubilación',
   PENSION: 'Pensión',
@@ -100,9 +124,17 @@ export const procedureTypeLabels: Record<ProcedureType, string> = {
 export const procedureTypeDescriptions: Record<ProcedureType, string> = {
   RETIREMENT: 'Seguimiento previsional con foco en jubilación.',
   PENSION: 'Gestión de pensión con hitos claros para avanzar.',
-  MEDICINES: 'Control de medicamentos, recetas y entregas vinculadas.',
+  MEDICINES: 'Seguimiento del trámite vinculado a cobertura de medicamentos.',
   SUBSIDY: 'Trámite de subsidio con control de etapas y cobro.',
   OTHER: 'Gestión administrativa personalizada.',
+};
+
+export const clientAlertTypeLabels: Record<ClientAlertType, string> = {
+  PRESCRIPTION: 'Receta',
+  SUBSIDY: 'Subsidio',
+  DOCUMENT: 'Documento',
+  APPOINTMENT: 'Turno',
+  OTHER: 'Otro',
 };
 
 export const procedureStatusLabels: Record<ProcedureStatus, string> = {

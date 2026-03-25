@@ -1,4 +1,5 @@
 import { ProcedureType } from '@prisma/client';
+import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { db } from '@/lib/db';
@@ -8,6 +9,14 @@ import { createClient, deleteClient } from '@/lib/services/client.service';
 import FeedbackBanner from '@/components/FeedbackBanner';
 import SubmitButton from '@/components/ui/SubmitButton';
 import { procedureTypeLabels } from '@/lib/types/app';
+
+function alertTone(status: 'active' | 'expiring' | 'expired' | 'resolved' | 'none') {
+  if (status === 'expired') return 'border-rose-400/20 bg-rose-400/10 text-rose-200';
+  if (status === 'expiring') return 'border-amber-400/20 bg-amber-400/10 text-amber-200';
+  if (status === 'active') return 'border-cyan-400/20 bg-cyan-400/10 text-cyan-200';
+  if (status === 'resolved') return 'border-emerald-400/20 bg-emerald-400/10 text-emerald-200';
+  return 'border-white/10 bg-slate-950/50 text-slate-300';
+}
 
 export default async function ClientesPage() {
   const user = await requireUserContext();
@@ -30,6 +39,7 @@ export default async function ClientesPage() {
     });
     revalidatePath('/clientes');
     revalidatePath('/tramites');
+    revalidatePath('/vigencias');
     revalidatePath('/');
     if (result.ok) {
       redirect('/clientes?notice=client-created');
@@ -42,6 +52,7 @@ export default async function ClientesPage() {
     const result = await deleteClient(currentUser, { clientId: String(formData.get('clientId') || '') });
     revalidatePath('/clientes');
     revalidatePath('/tramites');
+    revalidatePath('/vigencias');
     revalidatePath('/libro-diario');
     revalidatePath('/');
     if (result.ok) {
@@ -50,6 +61,7 @@ export default async function ClientesPage() {
   }
 
   const averageCommission = clients.length ? clients.reduce((sum, client) => sum + client.commissionRate, 0) / clients.length : 0;
+  const clientsWithAlerts = clients.filter((client) => client.activeAlertsCount > 0).length;
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
@@ -58,10 +70,11 @@ export default async function ClientesPage() {
         <div className="rounded-[2rem] border border-white/10 bg-white/5 p-5 shadow-xl shadow-slate-950/20 sm:p-6">
           <p className="text-xs uppercase tracking-[0.35em] text-cyan-300">Clientes</p>
           <h1 className="mt-3 text-3xl font-semibold text-white">Base de clientes del estudio</h1>
-          <p className="mt-3 text-sm leading-6 text-slate-300">Centralizá la información de cada cliente y mantené cada gestión conectada con el resto del estudio.</p>
-          <div className="mt-5 grid grid-cols-3 gap-3 text-sm">
+          <p className="mt-3 text-sm leading-6 text-slate-300">Centralizá la información de cada cliente y conectá sus gestiones con recordatorios reales de subsidios, recetas o documentación.</p>
+          <div className="mt-5 grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
             <div className="rounded-2xl border border-white/10 bg-slate-950/40 p-4"><p className="text-slate-400">Total</p><p className="mt-1 text-2xl font-semibold text-white">{clients.length}</p></div>
             <div className="rounded-2xl border border-white/10 bg-slate-950/40 p-4"><p className="text-slate-400">Activos</p><p className="mt-1 text-2xl font-semibold text-white">{clients.filter((client) => client.status === 'Activo').length}</p></div>
+            <div className="rounded-2xl border border-white/10 bg-slate-950/40 p-4"><p className="text-slate-400">Con seguimiento</p><p className="mt-1 text-2xl font-semibold text-white">{clientsWithAlerts}</p></div>
             <div className="rounded-2xl border border-white/10 bg-slate-950/40 p-4"><p className="text-slate-400">Comisión prom.</p><p className="mt-1 text-2xl font-semibold text-white">{averageCommission.toFixed(1)}%</p></div>
           </div>
         </div>
@@ -86,7 +99,22 @@ export default async function ClientesPage() {
           <article key={client.id} className="rounded-[2rem] border border-white/10 bg-white/5 p-5 shadow-lg shadow-slate-950/20">
             <div className="flex items-start justify-between gap-3"><div><p className="text-sm text-slate-400">{client.dni}</p><h2 className="mt-1 text-xl font-semibold text-white">{client.fullName}</h2></div><div className="flex items-center gap-2"><span className="rounded-full border border-cyan-400/20 bg-cyan-400/10 px-3 py-1 text-xs font-medium text-cyan-200">{client.status}</span><form action={removeClientAction}><input type="hidden" name="clientId" value={client.id} /><SubmitButton pendingText="Borrando..." className="rounded-full border border-rose-400/20 bg-rose-400/10 px-3 py-1 text-xs font-medium text-rose-200">Borrar</SubmitButton></form></div></div>
             <div className="mt-4 grid grid-cols-2 gap-3 text-sm text-slate-300 sm:grid-cols-4"><div><p className="text-slate-500">Trámite</p><p className="mt-1">{client.procedureType}</p></div><div><p className="text-slate-500">Comisión</p><p className="mt-1">{client.commissionRate}%</p></div><div><p className="text-slate-500">Teléfono</p><p className="mt-1">{client.phone || 'Sin dato'}</p></div><div><p className="text-slate-500">Alta</p><p className="mt-1">{client.createdAt}</p></div></div>
-            <div className="mt-4 rounded-2xl border border-white/10 bg-slate-950/40 p-4 text-sm text-slate-300"><p><span className="text-slate-500">Email:</span> {client.email || 'Sin dato'}</p><p className="mt-2"><span className="text-slate-500">Notas:</span> {client.notes || 'Sin notas'}</p></div>
+            <div className="mt-4 grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
+              <div className="rounded-2xl border border-white/10 bg-slate-950/40 p-4 text-sm text-slate-300"><p><span className="text-slate-500">Email:</span> {client.email || 'Sin dato'}</p><p className="mt-2"><span className="text-slate-500">Notas:</span> {client.notes || 'Sin notas'}</p></div>
+              <div className="rounded-2xl border border-white/10 bg-slate-950/40 p-4 text-sm text-slate-300">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-slate-500">Seguimiento</p>
+                    <p className="mt-1 text-lg font-semibold text-white">{client.activeAlertsCount > 0 ? `${client.activeAlertsCount} vigencia${client.activeAlertsCount === 1 ? '' : 's'} activa${client.activeAlertsCount === 1 ? '' : 's'}` : 'Sin vigencias activas'}</p>
+                  </div>
+                  <Link href="/vigencias" className="rounded-full border border-white/10 bg-white/5 px-3 py-2 text-xs font-medium text-slate-100 transition hover:bg-white/10">Gestionar</Link>
+                </div>
+                <div className="mt-3">
+                  <span className={`inline-flex rounded-full border px-3 py-1 text-xs font-medium ${alertTone(client.nextAlertStatus)}`}>{client.nextAlertStatusLabel}</span>
+                  <p className="mt-3 text-slate-300">{client.nextAlertTitle ? `${client.nextAlertTitle} · vence ${client.nextAlertDate}` : 'Podés cargar una vigencia desde el módulo dedicado.'}</p>
+                </div>
+              </div>
+            </div>
           </article>
         ))}
       </section>
