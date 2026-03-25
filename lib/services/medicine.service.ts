@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { AuditAction, Prisma } from '@prisma/client';
 import { db } from '@/lib/db';
 import { deleteBatchSchema, deleteMedicineSchema, medicineBatchSchema, medicineSaleSchema, medicineSchema } from '@/lib/schemas/medicine';
@@ -52,14 +53,25 @@ export async function createMedicine(user: UserContext, input: unknown) {
     }
 
     console.warn('[medicine] prescription columns missing in database, creating medicine without prescription fields');
-    const insertedRows = await db.$queryRaw<Array<{ id: string }>>(Prisma.sql`
-      INSERT INTO "Medicine" ("businessId", "createdByUserId", "name", "supplier", "purchasePrice", "salePrice")
-      VALUES (${user.businessId}, ${user.userId}, ${parsed.data.name}, ${parsed.data.supplier || null}, ${parsed.data.purchasePrice}, ${parsed.data.salePrice})
-      RETURNING "id"
+    const legacyMedicineId = randomUUID();
+
+    await db.$executeRaw(Prisma.sql`
+      INSERT INTO "Medicine" ("id", "businessId", "createdByUserId", "name", "supplier", "purchasePrice", "salePrice", "createdAt", "updatedAt")
+      VALUES (
+        ${legacyMedicineId},
+        ${user.businessId},
+        ${user.userId},
+        ${parsed.data.name},
+        ${parsed.data.supplier || null},
+        ${parsed.data.purchasePrice},
+        ${parsed.data.salePrice},
+        NOW(),
+        NOW()
+      )
     `);
 
     medicine = {
-      id: insertedRows[0]?.id,
+      id: legacyMedicineId,
     };
   }
 
