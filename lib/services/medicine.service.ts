@@ -102,7 +102,27 @@ export async function deleteMedicine(user: UserContext, input: unknown) {
     return { ok: false as const, message: 'Medicamento no encontrado.' };
   }
 
-  await db.medicine.delete({ where: { id: medicine.id } });
+  await db.$transaction(async (tx) => {
+    await tx.medicineSale.deleteMany({
+      where: {
+        medicineId: medicine.id,
+        businessId: user.businessId,
+      },
+    });
+
+    await tx.medicineBatch.deleteMany({
+      where: {
+        medicineId: medicine.id,
+      },
+    });
+
+    await tx.medicine.deleteMany({
+      where: {
+        id: medicine.id,
+        businessId: user.businessId,
+      },
+    });
+  });
 
   await createAuditLog({
     businessId: user.businessId,

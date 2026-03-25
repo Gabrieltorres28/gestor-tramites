@@ -231,7 +231,7 @@ export default async function MedicamentosPage() {
                     </form>
                     <form action={removeMedicineAction}>
                       <input type="hidden" name="medicineId" value={medicine.id} />
-                      <SubmitButton pendingText="Borrando..." className="rounded-2xl border border-rose-400/20 bg-rose-400/10 px-4 py-2 text-sm font-medium text-rose-200">Borrar</SubmitButton>
+                      <SubmitButton pendingText="Borrando..." className="rounded-2xl border border-rose-400/20 bg-rose-400/10 px-4 py-2 text-sm font-medium text-rose-200">Eliminar medicamento</SubmitButton>
                     </form>
                   </div>
                 </div>
@@ -294,7 +294,7 @@ export default async function MedicamentosPage() {
 
                 {medicine.batches.length === 0 ? (
                   <div className="mt-4 rounded-2xl border border-dashed border-white/10 bg-slate-950/30 p-4 text-sm text-slate-300">
-                    Todavía no cargaste stock para este medicamento. Usá el panel "Agregar stock" para dejarlo listo.
+Todavía no cargaste stock para este medicamento. Completá abajo lote, vencimiento y cantidad para dejarlo listo.
                   </div>
                 ) : null}
 
@@ -346,7 +346,7 @@ export default async function MedicamentosPage() {
             <div className="mt-5 grid gap-4">
               <label className="block"><span className="mb-2 block text-sm text-slate-300">Medicamento</span><select name="medicineId" className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none focus:border-cyan-400">{medicines.map((medicine) => <option key={medicine.id} value={medicine.id} className="bg-slate-900">{medicine.name}</option>)}</select></label>
               <label className="block"><span className="mb-2 block text-sm text-slate-300">Número de lote</span><input name="batchNumber" className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none focus:border-cyan-400" /></label>
-              <div className="grid gap-4 sm:grid-cols-2"><DateField label="Vencimiento" name="expirationDate" /><label className="block"><span className="mb-2 block text-sm text-slate-300">Cantidad</span><input type="number" name="quantityAvailable" className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none focus:border-cyan-400" /></label></div>
+              <div className="grid gap-4 sm:grid-cols-2"><DateField label="Vencimiento" name="expirationDate" defaultValue="2026-03-25" /><label className="block"><span className="mb-2 block text-sm text-slate-300">Cantidad</span><input type="number" name="quantityAvailable" className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none focus:border-cyan-400" /></label></div>
             </div>
             <SubmitButton pendingText="Guardando lote..." className="mt-5 w-full rounded-2xl bg-cyan-400 px-4 py-3 font-semibold text-slate-950 transition hover:bg-cyan-300">Guardar lote</SubmitButton>
           </form>
