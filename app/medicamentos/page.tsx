@@ -20,39 +20,16 @@ function rethrowIfRedirectError(error: unknown) {
   }
 }
 
-function getPrescriptionBadge(status: 'none' | 'active' | 'expiring' | 'expired') {
-  switch (status) {
-    case 'active':
-      return {
-        label: 'Receta vigente',
-        className: 'border-emerald-400/20 bg-emerald-400/10 text-emerald-200',
-      };
-    case 'expiring':
-      return {
-        label: 'Receta por vencer',
-        className: 'border-amber-400/20 bg-amber-400/10 text-amber-200',
-      };
-    case 'expired':
-      return {
-        label: 'Receta vencida',
-        className: 'border-rose-400/20 bg-rose-400/10 text-rose-200',
-      };
-    default:
-      return {
-        label: 'Sin control de receta',
-        className: 'border-white/10 bg-slate-950/50 text-slate-200',
-      };
-  }
-}
-
 function toErrorRedirect(message: string) {
   return `/medicamentos?error=${encodeURIComponent(message)}`;
 }
 
 export default async function MedicamentosPage() {
   const user = await requireUserContext();
-  const { medicines, supportsPrescriptionControl } = await getMedicinesViewData(user.businessId);
+  const { medicines } = await getMedicinesViewData(user.businessId);
   const lowStockCount = medicines.filter((medicine) => medicine.stockTotal <= 5).length;
+  const withStockCount = medicines.filter((medicine) => medicine.stockTotal > 0).length;
+  const expiringLotsCount = medicines.filter((medicine) => medicine.expirationStatus === 'proximo').length;
 
   async function addMedicineAction(formData: FormData) {
     'use server';
@@ -64,8 +41,8 @@ export default async function MedicamentosPage() {
         supplier: String(formData.get('supplier') || ''),
         purchasePrice: Number(formData.get('purchasePrice') || 0),
         salePrice: Number(formData.get('salePrice') || 0),
-        prescriptionIssuedAt: String(formData.get('prescriptionIssuedAt') || ''),
-        prescriptionDurationMonths: String(formData.get('prescriptionDurationMonths') || ''),
+        prescriptionIssuedAt: '',
+        prescriptionDurationMonths: '',
       });
 
       revalidatePath('/medicamentos');
@@ -159,7 +136,10 @@ export default async function MedicamentosPage() {
 
     try {
       const currentUser = await requireUserContext();
-      const result = await sellMedicine(currentUser, { medicineId: String(formData.get('medicineId') || ''), quantity: Number(formData.get('quantity') || 0) });
+      const result = await sellMedicine(currentUser, {
+        medicineId: String(formData.get('medicineId') || ''),
+        quantity: Number(formData.get('quantity') || 0),
+      });
 
       revalidatePath('/medicamentos');
       revalidatePath('/');
@@ -181,31 +161,26 @@ export default async function MedicamentosPage() {
       <FeedbackBanner />
       <section className="rounded-[2rem] border border-white/10 bg-white/5 p-5 shadow-xl shadow-slate-950/20 sm:p-6">
         <p className="text-xs uppercase tracking-[0.35em] text-cyan-300">Medicamentos</p>
-        <h1 className="mt-3 text-3xl font-semibold text-white">Stock simple, salida rápida</h1>
+        <h1 className="mt-3 text-3xl font-semibold text-white">Stock simple, salidas claras</h1>
         <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-300">
-          El flujo correcto es este: primero cargás el medicamento, después agregás el stock y recién ahí registrás cada salida.
+          Este módulo queda enfocado en tres tareas: cargar el medicamento, sumar stock por lote y descontar unidades cuando hay una salida.
         </p>
-        {!supportsPrescriptionControl ? (
-          <div className="mt-4 rounded-2xl border border-amber-400/20 bg-amber-400/10 p-4 text-sm leading-6 text-amber-100">
-            En este entorno hoy está activo solo el <span className="font-semibold">vencimiento del lote</span>. El control de receta todavía no se puede guardar en esta base, por eso no se refleja en la tarjeta aunque completes ese bloque.
-          </div>
-        ) : null}
         <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
           <div className="rounded-2xl border border-white/10 bg-slate-950/40 p-4">
             <p className="text-sm text-slate-400">Medicamentos</p>
             <p className="mt-1 text-2xl font-semibold text-white">{medicines.length}</p>
           </div>
           <div className="rounded-2xl border border-white/10 bg-slate-950/40 p-4">
+            <p className="text-sm text-slate-400">Con stock</p>
+            <p className="mt-1 text-2xl font-semibold text-white">{withStockCount}</p>
+          </div>
+          <div className="rounded-2xl border border-white/10 bg-slate-950/40 p-4">
             <p className="text-sm text-slate-400">Stock bajo</p>
             <p className="mt-1 text-2xl font-semibold text-white">{lowStockCount}</p>
           </div>
           <div className="rounded-2xl border border-white/10 bg-slate-950/40 p-4">
-            <p className="text-sm text-slate-400">Con control</p>
-            <p className="mt-1 text-2xl font-semibold text-white">{supportsPrescriptionControl ? medicines.filter((medicine) => medicine.prescriptionStatus !== 'none').length : 'No disponible'}</p>
-          </div>
-          <div className="rounded-2xl border border-white/10 bg-slate-950/40 p-4">
-            <p className="text-sm text-slate-400">Por vencer</p>
-            <p className="mt-1 text-2xl font-semibold text-white">{supportsPrescriptionControl ? medicines.filter((medicine) => medicine.prescriptionStatus === 'expiring').length : 'No disponible'}</p>
+            <p className="text-sm text-slate-400">Lotes por vencer</p>
+            <p className="mt-1 text-2xl font-semibold text-white">{expiringLotsCount}</p>
           </div>
         </div>
       </section>
@@ -213,7 +188,6 @@ export default async function MedicamentosPage() {
       <section className="mt-6 grid gap-6 xl:grid-cols-[1fr_0.9fr]">
         <div className="space-y-3">
           {medicines.map((medicine) => {
-            const prescriptionBadge = getPrescriptionBadge(medicine.prescriptionStatus);
             const noStock = medicine.stockTotal <= 0;
 
             return (
@@ -243,23 +217,37 @@ export default async function MedicamentosPage() {
                 </div>
 
                 <div className="mt-4 flex flex-wrap gap-2">
-                  <span className={`rounded-full border px-3 py-1 text-xs font-medium ${prescriptionBadge.className}`}>
-                    {prescriptionBadge.label}
+                  <span className="rounded-full border border-white/10 bg-slate-950/50 px-3 py-1 text-xs font-medium text-slate-200">
+                    {noStock ? 'Sin stock cargado' : 'Listo para salida'}
                   </span>
                   {medicine.stockTotal <= 5 ? (
                     <span className="rounded-full border border-amber-400/20 bg-amber-400/10 px-3 py-1 text-xs font-medium text-amber-200">
                       Stock bajo
                     </span>
                   ) : null}
+                  {medicine.expirationStatus === 'proximo' ? (
+                    <span className="rounded-full border border-amber-400/20 bg-amber-400/10 px-3 py-1 text-xs font-medium text-amber-200">
+                      Lote por vencer
+                    </span>
+                  ) : null}
+                  {medicine.expirationStatus === 'vencido' ? (
+                    <span className="rounded-full border border-rose-400/20 bg-rose-400/10 px-3 py-1 text-xs font-medium text-rose-200">
+                      Lote vencido
+                    </span>
+                  ) : null}
                 </div>
 
-                <div className="mt-4 grid grid-cols-2 gap-3 text-sm text-slate-300 sm:grid-cols-2 lg:grid-cols-4">
+                <div className="mt-4 grid grid-cols-2 gap-3 text-sm text-slate-300 sm:grid-cols-3 lg:grid-cols-5">
                   <div>
-                    <p className="text-slate-500">Stock</p>
+                    <p className="text-slate-500">Stock actual</p>
                     <p className="mt-1">{medicine.stockTotal}</p>
                   </div>
                   <div>
-                    <p className="text-slate-500">Vence lote</p>
+                    <p className="text-slate-500">Lotes</p>
+                    <p className="mt-1">{medicine.batches.length}</p>
+                  </div>
+                  <div>
+                    <p className="text-slate-500">Próximo vencimiento</p>
                     <p className="mt-1">{medicine.nextExpiration ? formatDate(medicine.nextExpiration) : 'Sin lotes'}</p>
                   </div>
                   <div>
@@ -270,48 +258,11 @@ export default async function MedicamentosPage() {
                     <p className="text-slate-500">Venta</p>
                     <p className="mt-1">{formatCurrency(medicine.salePrice)}</p>
                   </div>
-                  {supportsPrescriptionControl && medicine.prescriptionStatus !== 'none' ? (
-                    <>
-                      <div>
-                        <p className="text-slate-500">Receta emitida</p>
-                        <p className="mt-1">{medicine.prescriptionIssuedAt ? formatDate(medicine.prescriptionIssuedAt) : 'Sin dato'}</p>
-                      </div>
-                      <div>
-                        <p className="text-slate-500">Receta vence</p>
-                        <p className="mt-1">{medicine.prescriptionExpiresAt ? formatDate(medicine.prescriptionExpiresAt) : 'Sin dato'}</p>
-                      </div>
-                    </>
-                  ) : (
-                    <div>
-                      <p className="text-slate-500">Control</p>
-                      <p className="mt-1">{supportsPrescriptionControl ? 'No cargado' : 'No disponible'}</p>
-                    </div>
-                  )}
-                  <div>
-                    <p className="text-slate-500">Estado</p>
-                    <p className="mt-1">{noStock ? 'Sin stock cargado' : 'Listo para salida'}</p>
-                  </div>
                 </div>
-
-                <p className="mt-4 text-sm text-slate-300">Stock actual: <span className="font-semibold text-white">{medicine.stockTotal}</span> unidades.</p>
-
-                {supportsPrescriptionControl && (medicine.prescriptionStatus === 'active' || medicine.prescriptionStatus === 'expiring') ? (
-                  <p className="mt-4 text-sm text-slate-300">
-                    {medicine.prescriptionDaysRemaining === 0
-                      ? 'La receta vence hoy.'
-                      : `La receta sigue vigente por ${medicine.prescriptionDaysRemaining} días.`}
-                  </p>
-                ) : null}
-
-                {supportsPrescriptionControl && medicine.prescriptionStatus === 'expired' ? (
-                  <p className="mt-4 text-sm text-rose-200">
-                    La receta ya venció{medicine.prescriptionDaysRemaining ? ` hace ${Math.abs(medicine.prescriptionDaysRemaining)} días.` : '.'}
-                  </p>
-                ) : null}
 
                 {medicine.batches.length === 0 ? (
                   <div className="mt-4 rounded-2xl border border-dashed border-white/10 bg-slate-950/30 p-4 text-sm text-slate-300">
-Todavía no cargaste stock para este medicamento. Completá abajo lote, vencimiento y cantidad para dejarlo listo.
+                    Todavía no cargaste stock para este medicamento. Completá abajo lote, vencimiento del lote y cantidad para dejarlo listo.
                   </div>
                 ) : null}
 
@@ -325,7 +276,7 @@ Todavía no cargaste stock para este medicamento. Completá abajo lote, vencimie
                         </div>
                         <form action={removeBatchAction}>
                           <input type="hidden" name="batchId" value={batch.id} />
-                          <SubmitButton pendingText="Borrando..." className="rounded-full border border-rose-400/20 bg-rose-400/10 px-3 py-1 text-xs font-medium text-rose-200">Borrar</SubmitButton>
+                          <SubmitButton pendingText="Borrando..." className="rounded-full border border-rose-400/20 bg-rose-400/10 px-3 py-1 text-xs font-medium text-rose-200">Borrar lote</SubmitButton>
                         </form>
                       </div>
                       <p className="mt-3">Cantidad disponible: {batch.quantityAvailable}</p>
@@ -340,25 +291,14 @@ Todavía no cargaste stock para este medicamento. Completá abajo lote, vencimie
         <div className="space-y-6">
           <form action={addMedicineAction} className="rounded-[2rem] border border-white/10 bg-slate-900/70 p-5 shadow-xl shadow-slate-950/20 sm:p-6">
             <h2 className="text-xl font-semibold text-white">1. Cargar medicamento</h2>
-            <p className="mt-1 text-sm text-slate-400">Primero cargá el medicamento base. La receta es opcional y el stock lo agregás después.</p>
+            <p className="mt-1 text-sm text-slate-400">Primero cargá el medicamento base. Después le sumás stock y desde la tarjeta podés descontar unidades o eliminarlo.</p>
             <div className="mt-5 grid gap-4">
               <label className="block"><span className="mb-2 block text-sm text-slate-300">Nombre</span><input name="name" className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none focus:border-cyan-400" /></label>
               <label className="block"><span className="mb-2 block text-sm text-slate-300">Proveedor</span><input name="supplier" className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none focus:border-cyan-400" /></label>
               <div className="grid grid-cols-2 gap-4"><label className="block"><span className="mb-2 block text-sm text-slate-300">Precio compra</span><input type="number" name="purchasePrice" className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none focus:border-cyan-400" /></label><label className="block"><span className="mb-2 block text-sm text-slate-300">Precio venta</span><input type="number" name="salePrice" className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none focus:border-cyan-400" /></label></div>
-              {supportsPrescriptionControl ? (
-                <details className="rounded-2xl border border-white/10 bg-slate-950/40 p-4">
-                  <summary className="cursor-pointer list-none text-sm font-medium text-white">Agregar control de receta</summary>
-                  <p className="mt-2 text-sm text-slate-400">Usalo solo si necesitás seguir la vigencia de la receta. La fecha de abajo en stock corresponde al vencimiento del lote, no a la receta.</p>
-                  <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                    <DateField label="Fecha de receta" name="prescriptionIssuedAt" />
-                    <label className="block"><span className="mb-2 block text-sm text-slate-300">Duración en meses</span><input type="number" name="prescriptionDurationMonths" min="1" placeholder="Ej. 3" className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none focus:border-cyan-400" /></label>
-                  </div>
-                </details>
-              ) : (
-                <div className="rounded-2xl border border-dashed border-white/10 bg-slate-950/30 p-4 text-sm leading-6 text-slate-300">
-                  El control de receta no está disponible en esta base. Hoy el seguimiento activo en este módulo es el <span className="font-semibold text-white">vencimiento del lote</span>.
-                </div>
-              )}
+              <div className="rounded-2xl border border-dashed border-white/10 bg-slate-950/30 p-4 text-sm leading-6 text-slate-300">
+                Este módulo hoy está enfocado en <span className="font-semibold text-white">stock, lotes y salidas</span>. Las vigencias documentales las vamos a resolver en un módulo separado.
+              </div>
             </div>
             <SubmitButton pendingText="Guardando medicamento..." className="mt-5 w-full rounded-2xl bg-cyan-400 px-4 py-3 font-semibold text-slate-950 transition hover:bg-cyan-300">Guardar medicamento</SubmitButton>
           </form>
