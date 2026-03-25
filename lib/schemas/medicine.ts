@@ -33,21 +33,21 @@ export const medicineSchema = z
   });
 
 export const medicineBatchSchema = z.object({
-  medicineId: z.string().cuid(),
+  medicineId: z.string().min(1, 'Medicamento inválido.'),
   batchNumber: z.string().min(1, 'Ingresá el número de lote.'),
   expirationDate: z.string().min(1, 'Ingresá la fecha de vencimiento.'),
   quantityAvailable: z.coerce.number().int().positive('La cantidad debe ser mayor a cero.'),
 });
 
 export const medicineSaleSchema = z.object({
-  medicineId: z.string().cuid(),
+  medicineId: z.string().min(1, 'Medicamento inválido.'),
   quantity: z.coerce.number().int().positive('La cantidad debe ser mayor a cero.'),
 });
 
 export const deleteMedicineSchema = z.object({
-  medicineId: z.string().cuid(),
+  medicineId: z.string().min(1, 'Medicamento inválido.'),
 });
 
 export const deleteBatchSchema = z.object({
-  batchId: z.string().cuid(),
+  batchId: z.string().min(1, 'Lote inválido.'),
 });
