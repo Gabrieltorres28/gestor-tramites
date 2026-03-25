@@ -44,20 +44,16 @@ export function middleware(request: NextRequest) {
       cookieNames,
     });
 
-    if (hasSession && isLoginPage) {
-      const redirectUrl = request.nextUrl.clone();
-      redirectUrl.pathname = '/';
-      redirectUrl.search = '';
-
-      console.log('[middleware] redirect authenticated user away from login', {
-        from: pathname,
-        to: redirectUrl.toString(),
+    if (isLoginPage || isAuthPage) {
+      console.log('[middleware] auth path, allowing request', {
+        pathname,
+        hasSession,
       });
 
-      return NextResponse.redirect(redirectUrl);
+      return NextResponse.next();
     }
 
-    if (!hasSession && !isLoginPage && !isAuthPage) {
+    if (!hasSession) {
       const redirectUrl = request.nextUrl.clone();
       redirectUrl.pathname = '/login';
       redirectUrl.search = '';

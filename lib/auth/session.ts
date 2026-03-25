@@ -45,35 +45,40 @@ async function bootstrapAdmin(authUser: { id: string; email?: string; user_metad
 }
 
 export async function getCurrentUserContext(): Promise<UserContext | null> {
-  const supabase = await createSupabaseServerClient();
-  const { data, error } = await supabase.auth.getUser();
+  try {
+    const supabase = await createSupabaseServerClient();
+    const { data, error } = await supabase.auth.getUser();
 
-  if (error || data.user?.id === undefined) {
+    if (error || data.user?.id === undefined) {
+      return null;
+    }
+
+    let profile = await db.user.findUnique({
+      where: { id: data.user.id },
+      include: { business: true },
+    });
+
+    if (profile === null) {
+      profile = await bootstrapAdmin(data.user);
+    }
+
+    if (profile === null) {
+      return null;
+    }
+
+    return {
+      userId: profile.id,
+      email: profile.email,
+      fullName: profile.fullName,
+      role: profile.role,
+      businessId: profile.businessId,
+      businessName: profile.business.businessName,
+      ownerName: profile.business.ownerName,
+    };
+  } catch (error) {
+    console.error('[auth] getCurrentUserContext failed, treating as signed out', error);
     return null;
   }
-
-  let profile = await db.user.findUnique({
-    where: { id: data.user.id },
-    include: { business: true },
-  });
-
-  if (profile === null) {
-    profile = await bootstrapAdmin(data.user);
-  }
-
-  if (profile === null) {
-    return null;
-  }
-
-  return {
-    userId: profile.id,
-    email: profile.email,
-    fullName: profile.fullName,
-    role: profile.role,
-    businessId: profile.businessId,
-    businessName: profile.business.businessName,
-    ownerName: profile.business.ownerName,
-  };
 }
 
 export async function requireUserContext() {
