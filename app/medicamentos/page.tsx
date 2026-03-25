@@ -33,6 +33,10 @@ function getPrescriptionBadge(status: 'none' | 'active' | 'expiring' | 'expired'
   }
 }
 
+function toErrorRedirect(message: string) {
+  return `/medicamentos?error=${encodeURIComponent(message)}`;
+}
+
 export default async function MedicamentosPage() {
   const user = await requireUserContext();
   const medicines = await getMedicines(user.businessId);
@@ -40,79 +44,119 @@ export default async function MedicamentosPage() {
 
   async function addMedicineAction(formData: FormData) {
     'use server';
-    const currentUser = await requireUserContext();
-    const result = await createMedicine(currentUser, {
-      name: String(formData.get('name') || ''),
-      supplier: String(formData.get('supplier') || ''),
-      purchasePrice: Number(formData.get('purchasePrice') || 0),
-      salePrice: Number(formData.get('salePrice') || 0),
-      prescriptionIssuedAt: String(formData.get('prescriptionIssuedAt') || ''),
-      prescriptionDurationMonths: String(formData.get('prescriptionDurationMonths') || ''),
-    });
-    revalidatePath('/medicamentos');
-    revalidatePath('/');
-    if (result.ok) {
-      redirect('/medicamentos?notice=medicine-created');
-    }
 
-    redirect(`/medicamentos?error=${encodeURIComponent(result.message || 'No pudimos guardar el medicamento.')}`);
+    try {
+      const currentUser = await requireUserContext();
+      const result = await createMedicine(currentUser, {
+        name: String(formData.get('name') || ''),
+        supplier: String(formData.get('supplier') || ''),
+        purchasePrice: Number(formData.get('purchasePrice') || 0),
+        salePrice: Number(formData.get('salePrice') || 0),
+        prescriptionIssuedAt: String(formData.get('prescriptionIssuedAt') || ''),
+        prescriptionDurationMonths: String(formData.get('prescriptionDurationMonths') || ''),
+      });
+
+      revalidatePath('/medicamentos');
+      revalidatePath('/');
+
+      if (result.ok) {
+        redirect('/medicamentos?notice=medicine-created');
+      }
+
+      redirect(toErrorRedirect(result.message || 'No pudimos guardar el medicamento.'));
+    } catch (error) {
+      console.error('[medicamentos] addMedicineAction failed', error);
+      redirect(toErrorRedirect('No pudimos guardar el medicamento. Revisá los datos e intentá de nuevo.'));
+    }
   }
 
   async function addBatchAction(formData: FormData) {
     'use server';
-    const currentUser = await requireUserContext();
-    const result = await createMedicineBatch(currentUser, {
-      medicineId: String(formData.get('medicineId') || ''),
-      batchNumber: String(formData.get('batchNumber') || ''),
-      expirationDate: String(formData.get('expirationDate') || ''),
-      quantityAvailable: Number(formData.get('quantityAvailable') || 0),
-    });
-    revalidatePath('/medicamentos');
-    revalidatePath('/');
-    if (result.ok) {
-      redirect('/medicamentos?notice=batch-created');
-    }
 
-    redirect(`/medicamentos?error=${encodeURIComponent(result.message || 'No pudimos guardar el stock.')}`);
+    try {
+      const currentUser = await requireUserContext();
+      const result = await createMedicineBatch(currentUser, {
+        medicineId: String(formData.get('medicineId') || ''),
+        batchNumber: String(formData.get('batchNumber') || ''),
+        expirationDate: String(formData.get('expirationDate') || ''),
+        quantityAvailable: Number(formData.get('quantityAvailable') || 0),
+      });
+
+      revalidatePath('/medicamentos');
+      revalidatePath('/');
+
+      if (result.ok) {
+        redirect('/medicamentos?notice=batch-created');
+      }
+
+      redirect(toErrorRedirect(result.message || 'No pudimos guardar el stock.'));
+    } catch (error) {
+      console.error('[medicamentos] addBatchAction failed', error);
+      redirect(toErrorRedirect('No pudimos guardar el stock. Revisá los datos e intentá de nuevo.'));
+    }
   }
 
   async function removeMedicineAction(formData: FormData) {
     'use server';
-    const currentUser = await requireUserContext();
-    const result = await deleteMedicine(currentUser, { medicineId: String(formData.get('medicineId') || '') });
-    revalidatePath('/medicamentos');
-    revalidatePath('/');
-    if (result.ok) {
-      redirect('/medicamentos?notice=medicine-deleted');
-    }
 
-    redirect(`/medicamentos?error=${encodeURIComponent(result.message || 'No pudimos borrar el medicamento.')}`);
+    try {
+      const currentUser = await requireUserContext();
+      const result = await deleteMedicine(currentUser, { medicineId: String(formData.get('medicineId') || '') });
+
+      revalidatePath('/medicamentos');
+      revalidatePath('/');
+
+      if (result.ok) {
+        redirect('/medicamentos?notice=medicine-deleted');
+      }
+
+      redirect(toErrorRedirect(result.message || 'No pudimos borrar el medicamento.'));
+    } catch (error) {
+      console.error('[medicamentos] removeMedicineAction failed', error);
+      redirect(toErrorRedirect('No pudimos borrar el medicamento.'));
+    }
   }
 
   async function removeBatchAction(formData: FormData) {
     'use server';
-    const currentUser = await requireUserContext();
-    const result = await deleteMedicineBatch(currentUser, { batchId: String(formData.get('batchId') || '') });
-    revalidatePath('/medicamentos');
-    revalidatePath('/');
-    if (result.ok) {
-      redirect('/medicamentos?notice=batch-deleted');
-    }
 
-    redirect(`/medicamentos?error=${encodeURIComponent(result.message || 'No pudimos borrar el lote.')}`);
+    try {
+      const currentUser = await requireUserContext();
+      const result = await deleteMedicineBatch(currentUser, { batchId: String(formData.get('batchId') || '') });
+
+      revalidatePath('/medicamentos');
+      revalidatePath('/');
+
+      if (result.ok) {
+        redirect('/medicamentos?notice=batch-deleted');
+      }
+
+      redirect(toErrorRedirect(result.message || 'No pudimos borrar el lote.'));
+    } catch (error) {
+      console.error('[medicamentos] removeBatchAction failed', error);
+      redirect(toErrorRedirect('No pudimos borrar el lote.'));
+    }
   }
 
   async function sellMedicineAction(formData: FormData) {
     'use server';
-    const currentUser = await requireUserContext();
-    const result = await sellMedicine(currentUser, { medicineId: String(formData.get('medicineId') || ''), quantity: Number(formData.get('quantity') || 0) });
-    revalidatePath('/medicamentos');
-    revalidatePath('/');
-    if (result.ok) {
-      redirect('/medicamentos?notice=medicine-sold');
-    }
 
-    redirect(`/medicamentos?error=${encodeURIComponent(result.message || 'No pudimos registrar la salida.')}`);
+    try {
+      const currentUser = await requireUserContext();
+      const result = await sellMedicine(currentUser, { medicineId: String(formData.get('medicineId') || ''), quantity: Number(formData.get('quantity') || 0) });
+
+      revalidatePath('/medicamentos');
+      revalidatePath('/');
+
+      if (result.ok) {
+        redirect('/medicamentos?notice=medicine-sold');
+      }
+
+      redirect(toErrorRedirect(result.message || 'No pudimos registrar la salida.'));
+    } catch (error) {
+      console.error('[medicamentos] sellMedicineAction failed', error);
+      redirect(toErrorRedirect('No pudimos registrar la salida.'));
+    }
   }
 
   return (
