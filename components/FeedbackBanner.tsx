@@ -17,9 +17,6 @@ const notices: Record<string, string> = {
   'batch-created': 'Stock agregado con éxito.',
   'batch-deleted': 'Lote eliminado con éxito.',
   'medicine-sold': 'Salida registrada y stock actualizado.',
-  'alert-created': 'Vigencia guardada con éxito.',
-  'alert-updated': 'Vigencia actualizada con éxito.',
-  'alert-deleted': 'Vigencia eliminada con éxito.',
 };
 
 function SuccessIcon() {

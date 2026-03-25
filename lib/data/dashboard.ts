@@ -1,17 +1,17 @@
-import { ClientStatus } from '@prisma/client';
+import { ClientStatus, ProcedureStatus } from '@prisma/client';
 import { db } from '@/lib/db';
 import { serializeDecimal } from '@/lib/utils';
 import { getCashMovements } from '@/lib/data/cash';
-import { getClientAlerts } from '@/lib/data/client-alerts';
+import { getMedicines } from '@/lib/data/medicines';
 import { getProcedures } from '@/lib/data/procedures';
 
 export async function getDashboardData(businessId: string) {
-  const [clientsCount, activeClientsCount, procedures, movements, clientAlerts, settings] = await Promise.all([
+  const [clientsCount, activeClientsCount, procedures, movements, medicines, settings] = await Promise.all([
     db.client.count({ where: { businessId } }),
     db.client.count({ where: { businessId, status: ClientStatus.ACTIVE } }),
     getProcedures(businessId),
     getCashMovements(businessId),
-    getClientAlerts(businessId),
+    getMedicines(businessId),
     db.businessSettings.findUnique({ where: { id: businessId } }),
   ]);
 
@@ -20,11 +20,9 @@ export async function getDashboardData(businessId: string) {
   const tramitesActivos = procedures.filter((procedure) => procedure.statusKey === 'IN_PROGRESS').length;
   const tramitesCobrados = procedures.filter((procedure) => procedure.statusKey === 'PAID').length;
   const gananciaMensual = movements.filter((movement) => movement.type === 'Ingreso comisión').reduce((sum, movement) => sum + movement.amount, 0);
-  const vigenciasPorVencer = clientAlerts.filter((alert) => alert.status === 'expiring').length;
-  const vigenciasVencidas = clientAlerts.filter((alert) => alert.status === 'expired').length;
-  const vigenciasResueltas = clientAlerts.filter((alert) => alert.status === 'resolved').length;
+  const medicamentosPorVencer = medicines.filter((medicine) => medicine.expirationStatus === 'proximo').length;
+  const medicamentosVencidos = medicines.filter((medicine) => medicine.expirationStatus === 'vencido').length;
   const recentTramites = procedures.slice(0, 4);
-  const upcomingAlerts = clientAlerts.filter((alert) => alert.status !== 'resolved').slice(0, 4);
 
   const chartByMonth = new Map<string, { mes: string; ingresos: number; egresos: number; ganancia: number }>();
 
@@ -66,12 +64,10 @@ export async function getDashboardData(businessId: string) {
       tramitesActivos,
       tramitesCobrados,
       gananciaMensual,
-      vigenciasPorVencer,
-      vigenciasVencidas,
-      vigenciasResueltas,
+      medicamentosPorVencer,
+      medicamentosVencidos,
     },
     chartData: Array.from(chartByMonth.entries()).sort((a, b) => a[0].localeCompare(b[0])).map(([, value]) => value),
     recentTramites,
-    upcomingAlerts,
   };
 }

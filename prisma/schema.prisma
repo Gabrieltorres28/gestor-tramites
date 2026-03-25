@@ -55,31 +55,22 @@ enum AuditAction {
   LOGOUT
 }
 
-enum ClientAlertType {
-  PRESCRIPTION
-  SUBSIDY
-  DOCUMENT
-  APPOINTMENT
-  OTHER
-}
-
 model User {
-  id            String           @id
-  businessId    String
-  email         String           @unique
-  fullName      String
-  role          UserRole         @default(OPERATOR)
-  isActive      Boolean          @default(true)
-  createdAt     DateTime         @default(now())
-  updatedAt     DateTime         @updatedAt
-  business      BusinessSettings @relation(fields: [businessId], references: [id], onDelete: Cascade)
-  auditLogs     AuditLog[]
-  clients       Client[]         @relation("ClientCreatedBy")
-  procedures    Procedure[]      @relation("ProcedureCreatedBy")
-  cashMovements CashMovement[]   @relation("CashMovementCreatedBy")
-  medicines     Medicine[]       @relation("MedicineCreatedBy")
+  id           String           @id
+  businessId   String
+  email        String           @unique
+  fullName     String
+  role         UserRole         @default(OPERATOR)
+  isActive     Boolean          @default(true)
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+  business     BusinessSettings @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  auditLogs    AuditLog[]
+  clients      Client[]         @relation("ClientCreatedBy")
+  procedures   Procedure[]      @relation("ProcedureCreatedBy")
+  cashMovements CashMovement[]  @relation("CashMovementCreatedBy")
+  medicines    Medicine[]       @relation("MedicineCreatedBy")
   medicineSales MedicineSale[]
-  clientAlerts  ClientAlert[]    @relation("ClientAlertCreatedBy")
 
   @@index([businessId])
 }
@@ -97,7 +88,6 @@ model BusinessSettings {
   cashMovements         CashMovement[]
   medicines             Medicine[]
   medicineSales         MedicineSale[]
-  clientAlerts          ClientAlert[]
   auditLogs             AuditLog[]
 }
 
@@ -118,140 +108,117 @@ model Client {
   business         BusinessSettings @relation(fields: [businessId], references: [id], onDelete: Cascade)
   createdBy        User             @relation("ClientCreatedBy", fields: [createdByUserId], references: [id])
   procedures       Procedure[]
-  clientAlerts     ClientAlert[]
 
   @@unique([businessId, dni])
   @@index([businessId, fullName])
 }
 
 model Procedure {
-  id               String           @id @default(cuid())
-  businessId       String
-  clientId         String
-  createdByUserId  String
-  type             ProcedureType
-  status           ProcedureStatus  @default(IN_PROGRESS)
-  amountManaged    Decimal          @db.Decimal(14, 2)
-  commissionRate   Decimal          @db.Decimal(5, 2)
-  commissionAmount Decimal          @db.Decimal(14, 2)
-  startedAt        DateTime
-  completedAt      DateTime?
-  description      String?
-  createdAt        DateTime         @default(now())
-  updatedAt        DateTime         @updatedAt
-  business         BusinessSettings @relation(fields: [businessId], references: [id], onDelete: Cascade)
-  client           Client           @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  createdBy        User             @relation("ProcedureCreatedBy", fields: [createdByUserId], references: [id])
-  cashMovements    CashMovement[]
+  id                  String            @id @default(cuid())
+  businessId          String
+  clientId            String
+  createdByUserId     String
+  type                ProcedureType
+  status              ProcedureStatus   @default(IN_PROGRESS)
+  amountManaged       Decimal           @db.Decimal(14, 2)
+  commissionRate      Decimal           @db.Decimal(5, 2)
+  commissionAmount    Decimal           @db.Decimal(14, 2)
+  startedAt           DateTime
+  completedAt         DateTime?
+  description         String?
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+  business            BusinessSettings  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  client              Client            @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  createdBy           User              @relation("ProcedureCreatedBy", fields: [createdByUserId], references: [id])
+  cashMovements       CashMovement[]
 
   @@index([businessId, status])
   @@index([clientId])
 }
 
 model CashMovement {
-  id              String           @id @default(cuid())
-  businessId      String
-  createdByUserId String
-  procedureId     String?
-  type            CashMovementType
-  paymentMethod   PaymentMethod
-  description     String
-  amount          Decimal          @db.Decimal(14, 2)
-  movementDate    DateTime
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
-  business        BusinessSettings @relation(fields: [businessId], references: [id], onDelete: Cascade)
-  createdBy       User             @relation("CashMovementCreatedBy", fields: [createdByUserId], references: [id])
-  procedure       Procedure?       @relation(fields: [procedureId], references: [id], onDelete: SetNull)
+  id               String            @id @default(cuid())
+  businessId       String
+  createdByUserId  String
+  procedureId      String?
+  type             CashMovementType
+  paymentMethod    PaymentMethod
+  description      String
+  amount           Decimal           @db.Decimal(14, 2)
+  movementDate     DateTime
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  business         BusinessSettings  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  createdBy        User              @relation("CashMovementCreatedBy", fields: [createdByUserId], references: [id])
+  procedure        Procedure?        @relation(fields: [procedureId], references: [id], onDelete: SetNull)
 
   @@index([businessId, movementDate])
 }
 
 model Medicine {
-  id                         String           @id @default(cuid())
+  id                         String            @id @default(cuid())
   businessId                 String
   createdByUserId            String
   name                       String
   supplier                   String?
-  purchasePrice              Decimal          @db.Decimal(14, 2)
-  salePrice                  Decimal          @db.Decimal(14, 2)
+  purchasePrice              Decimal           @db.Decimal(14, 2)
+  salePrice                  Decimal           @db.Decimal(14, 2)
   prescriptionIssuedAt       DateTime?
   prescriptionDurationMonths Int?
-  createdAt                  DateTime         @default(now())
-  updatedAt                  DateTime         @updatedAt
-  business                   BusinessSettings @relation(fields: [businessId], references: [id], onDelete: Cascade)
-  createdBy                  User             @relation("MedicineCreatedBy", fields: [createdByUserId], references: [id])
-  batches                    MedicineBatch[]
-  sales                      MedicineSale[]
+  createdAt                  DateTime          @default(now())
+  updatedAt                  DateTime          @updatedAt
+  business         BusinessSettings  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  createdBy        User              @relation("MedicineCreatedBy", fields: [createdByUserId], references: [id])
+  batches          MedicineBatch[]
+  sales            MedicineSale[]
 
   @@index([businessId, name])
 }
 
 model MedicineBatch {
-  id                String        @id @default(cuid())
-  medicineId        String
-  batchNumber       String
-  expirationDate    DateTime
+  id               String      @id @default(cuid())
+  medicineId       String
+  batchNumber      String
+  expirationDate   DateTime
   quantityAvailable Int
-  createdAt         DateTime      @default(now())
-  updatedAt         DateTime      @updatedAt
-  medicine          Medicine      @relation(fields: [medicineId], references: [id], onDelete: Cascade)
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+  medicine         Medicine    @relation(fields: [medicineId], references: [id], onDelete: Cascade)
 
   @@index([medicineId, expirationDate])
 }
 
 model MedicineSale {
-  id              String           @id @default(cuid())
-  businessId      String
-  medicineId      String
-  createdByUserId String
-  quantity        Int
-  unitPrice       Decimal          @db.Decimal(14, 2)
-  totalAmount     Decimal          @db.Decimal(14, 2)
-  soldAt          DateTime
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
-  business        BusinessSettings @relation(fields: [businessId], references: [id], onDelete: Cascade)
-  medicine        Medicine         @relation(fields: [medicineId], references: [id], onDelete: Cascade)
-  createdBy       User             @relation(fields: [createdByUserId], references: [id])
+  id               String            @id @default(cuid())
+  businessId       String
+  medicineId       String
+  createdByUserId  String
+  quantity         Int
+  unitPrice        Decimal           @db.Decimal(14, 2)
+  totalAmount      Decimal           @db.Decimal(14, 2)
+  soldAt           DateTime
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  business         BusinessSettings  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  medicine         Medicine          @relation(fields: [medicineId], references: [id], onDelete: Cascade)
+  createdBy        User              @relation(fields: [createdByUserId], references: [id])
 
   @@index([businessId, soldAt])
 }
 
-model ClientAlert {
-  id              String           @id @default(cuid())
-  businessId      String
-  clientId        String
-  createdByUserId String
-  type            ClientAlertType
-  title           String
-  notes           String?
-  startsAt        DateTime?
-  expiresAt       DateTime
-  resolvedAt      DateTime?
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
-  business        BusinessSettings @relation(fields: [businessId], references: [id], onDelete: Cascade)
-  client          Client           @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  createdBy       User             @relation("ClientAlertCreatedBy", fields: [createdByUserId], references: [id])
-
-  @@index([businessId, expiresAt])
-  @@index([clientId, expiresAt])
-  @@index([businessId, resolvedAt])
-}
-
 model AuditLog {
-  id          String           @id @default(cuid())
-  businessId  String
-  actorUserId String?
-  entityType  String
-  entityId    String?
-  action      AuditAction
-  description String
-  metadata    Json?
-  createdAt   DateTime         @default(now())
-  business    BusinessSettings @relation(fields: [businessId], references: [id], onDelete: Cascade)
-  actor       User?            @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
+  id            String            @id @default(cuid())
+  businessId    String
+  actorUserId   String?
+  entityType    String
+  entityId      String?
+  action        AuditAction
+  description   String
+  metadata      Json?
+  createdAt     DateTime          @default(now())
+  business      BusinessSettings  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  actor         User?             @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
 
   @@index([businessId, createdAt])
   @@index([entityType, entityId])
