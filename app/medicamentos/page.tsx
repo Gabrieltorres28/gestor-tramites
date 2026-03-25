@@ -1,7 +1,7 @@
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { requireUserContext } from '@/lib/auth/session';
-import { getMedicines } from '@/lib/data/medicines';
+import { getMedicinesViewData } from '@/lib/data/medicines';
 import { createMedicine, createMedicineBatch, deleteMedicine, deleteMedicineBatch, sellMedicine } from '@/lib/services/medicine.service';
 import FeedbackBanner from '@/components/FeedbackBanner';
 import SubmitButton from '@/components/ui/SubmitButton';
@@ -51,7 +51,7 @@ function toErrorRedirect(message: string) {
 
 export default async function MedicamentosPage() {
   const user = await requireUserContext();
-  const medicines = await getMedicines(user.businessId);
+  const { medicines, supportsPrescriptionControl } = await getMedicinesViewData(user.businessId);
   const lowStockCount = medicines.filter((medicine) => medicine.stockTotal <= 5).length;
 
   async function addMedicineAction(formData: FormData) {
@@ -185,6 +185,11 @@ export default async function MedicamentosPage() {
         <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-300">
           El flujo correcto es este: primero cargás el medicamento, después agregás el stock y recién ahí registrás cada salida.
         </p>
+        {!supportsPrescriptionControl ? (
+          <div className="mt-4 rounded-2xl border border-amber-400/20 bg-amber-400/10 p-4 text-sm leading-6 text-amber-100">
+            En este entorno hoy está activo solo el <span className="font-semibold">vencimiento del lote</span>. El control de receta todavía no se puede guardar en esta base, por eso no se refleja en la tarjeta aunque completes ese bloque.
+          </div>
+        ) : null}
         <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
           <div className="rounded-2xl border border-white/10 bg-slate-950/40 p-4">
             <p className="text-sm text-slate-400">Medicamentos</p>
@@ -196,11 +201,11 @@ export default async function MedicamentosPage() {
           </div>
           <div className="rounded-2xl border border-white/10 bg-slate-950/40 p-4">
             <p className="text-sm text-slate-400">Con control</p>
-            <p className="mt-1 text-2xl font-semibold text-white">{medicines.filter((medicine) => medicine.prescriptionStatus !== 'none').length}</p>
+            <p className="mt-1 text-2xl font-semibold text-white">{supportsPrescriptionControl ? medicines.filter((medicine) => medicine.prescriptionStatus !== 'none').length : 'No disponible'}</p>
           </div>
           <div className="rounded-2xl border border-white/10 bg-slate-950/40 p-4">
             <p className="text-sm text-slate-400">Por vencer</p>
-            <p className="mt-1 text-2xl font-semibold text-white">{medicines.filter((medicine) => medicine.prescriptionStatus === 'expiring').length}</p>
+            <p className="mt-1 text-2xl font-semibold text-white">{supportsPrescriptionControl ? medicines.filter((medicine) => medicine.prescriptionStatus === 'expiring').length : 'No disponible'}</p>
           </div>
         </div>
       </section>
@@ -265,7 +270,7 @@ export default async function MedicamentosPage() {
                     <p className="text-slate-500">Venta</p>
                     <p className="mt-1">{formatCurrency(medicine.salePrice)}</p>
                   </div>
-                  {medicine.prescriptionStatus !== 'none' ? (
+                  {supportsPrescriptionControl && medicine.prescriptionStatus !== 'none' ? (
                     <>
                       <div>
                         <p className="text-slate-500">Receta emitida</p>
@@ -279,7 +284,7 @@ export default async function MedicamentosPage() {
                   ) : (
                     <div>
                       <p className="text-slate-500">Control</p>
-                      <p className="mt-1">No cargado</p>
+                      <p className="mt-1">{supportsPrescriptionControl ? 'No cargado' : 'No disponible'}</p>
                     </div>
                   )}
                   <div>
@@ -290,7 +295,7 @@ export default async function MedicamentosPage() {
 
                 <p className="mt-4 text-sm text-slate-300">Stock actual: <span className="font-semibold text-white">{medicine.stockTotal}</span> unidades.</p>
 
-                {medicine.prescriptionStatus === 'active' || medicine.prescriptionStatus === 'expiring' ? (
+                {supportsPrescriptionControl && (medicine.prescriptionStatus === 'active' || medicine.prescriptionStatus === 'expiring') ? (
                   <p className="mt-4 text-sm text-slate-300">
                     {medicine.prescriptionDaysRemaining === 0
                       ? 'La receta vence hoy.'
@@ -298,7 +303,7 @@ export default async function MedicamentosPage() {
                   </p>
                 ) : null}
 
-                {medicine.prescriptionStatus === 'expired' ? (
+                {supportsPrescriptionControl && medicine.prescriptionStatus === 'expired' ? (
                   <p className="mt-4 text-sm text-rose-200">
                     La receta ya venció{medicine.prescriptionDaysRemaining ? ` hace ${Math.abs(medicine.prescriptionDaysRemaining)} días.` : '.'}
                   </p>
@@ -340,25 +345,31 @@ Todavía no cargaste stock para este medicamento. Completá abajo lote, vencimie
               <label className="block"><span className="mb-2 block text-sm text-slate-300">Nombre</span><input name="name" className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none focus:border-cyan-400" /></label>
               <label className="block"><span className="mb-2 block text-sm text-slate-300">Proveedor</span><input name="supplier" className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none focus:border-cyan-400" /></label>
               <div className="grid grid-cols-2 gap-4"><label className="block"><span className="mb-2 block text-sm text-slate-300">Precio compra</span><input type="number" name="purchasePrice" className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none focus:border-cyan-400" /></label><label className="block"><span className="mb-2 block text-sm text-slate-300">Precio venta</span><input type="number" name="salePrice" className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none focus:border-cyan-400" /></label></div>
-              <details className="rounded-2xl border border-white/10 bg-slate-950/40 p-4">
-                <summary className="cursor-pointer list-none text-sm font-medium text-white">Agregar control de receta</summary>
-                <p className="mt-2 text-sm text-slate-400">Solo completalo si necesitás controlar vigencia. Si cargás una fecha, también tenés que indicar la duración.</p>
-                <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                  <DateField label="Fecha de receta" name="prescriptionIssuedAt" />
-                  <label className="block"><span className="mb-2 block text-sm text-slate-300">Duración en meses</span><input type="number" name="prescriptionDurationMonths" min="1" placeholder="Ej. 3" className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none focus:border-cyan-400" /></label>
+              {supportsPrescriptionControl ? (
+                <details className="rounded-2xl border border-white/10 bg-slate-950/40 p-4">
+                  <summary className="cursor-pointer list-none text-sm font-medium text-white">Agregar control de receta</summary>
+                  <p className="mt-2 text-sm text-slate-400">Usalo solo si necesitás seguir la vigencia de la receta. La fecha de abajo en stock corresponde al vencimiento del lote, no a la receta.</p>
+                  <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                    <DateField label="Fecha de receta" name="prescriptionIssuedAt" />
+                    <label className="block"><span className="mb-2 block text-sm text-slate-300">Duración en meses</span><input type="number" name="prescriptionDurationMonths" min="1" placeholder="Ej. 3" className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none focus:border-cyan-400" /></label>
+                  </div>
+                </details>
+              ) : (
+                <div className="rounded-2xl border border-dashed border-white/10 bg-slate-950/30 p-4 text-sm leading-6 text-slate-300">
+                  El control de receta no está disponible en esta base. Hoy el seguimiento activo en este módulo es el <span className="font-semibold text-white">vencimiento del lote</span>.
                 </div>
-              </details>
+              )}
             </div>
             <SubmitButton pendingText="Guardando medicamento..." className="mt-5 w-full rounded-2xl bg-cyan-400 px-4 py-3 font-semibold text-slate-950 transition hover:bg-cyan-300">Guardar medicamento</SubmitButton>
           </form>
 
           <form action={addBatchAction} className="rounded-[2rem] border border-white/10 bg-slate-900/70 p-5 shadow-xl shadow-slate-950/20 sm:p-6">
             <h2 className="text-xl font-semibold text-white">2. Agregar stock</h2>
-            <p className="mt-1 text-sm text-slate-400">Cuando el medicamento ya existe, cargá lote, vencimiento y cantidad para poder registrar salidas.</p>
+            <p className="mt-1 text-sm text-slate-400">Cuando el medicamento ya existe, cargá lote, vencimiento del lote y cantidad para poder registrar salidas.</p>
             <div className="mt-5 grid gap-4">
               <label className="block"><span className="mb-2 block text-sm text-slate-300">Medicamento</span><select name="medicineId" className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none focus:border-cyan-400">{medicines.map((medicine) => <option key={medicine.id} value={medicine.id} className="bg-slate-900">{medicine.name}</option>)}</select></label>
               <label className="block"><span className="mb-2 block text-sm text-slate-300">Número de lote</span><input name="batchNumber" className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none focus:border-cyan-400" /></label>
-              <div className="grid gap-4 sm:grid-cols-2"><DateField label="Vencimiento" name="expirationDate" defaultValue="2026-03-25" /><label className="block"><span className="mb-2 block text-sm text-slate-300">Cantidad</span><input type="number" name="quantityAvailable" className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none focus:border-cyan-400" /></label></div>
+              <div className="grid gap-4 sm:grid-cols-2"><DateField label="Vencimiento del lote" name="expirationDate" defaultValue="2026-03-25" /><label className="block"><span className="mb-2 block text-sm text-slate-300">Cantidad</span><input type="number" name="quantityAvailable" className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none focus:border-cyan-400" /></label></div>
             </div>
             <SubmitButton pendingText="Guardando lote..." className="mt-5 w-full rounded-2xl bg-cyan-400 px-4 py-3 font-semibold text-slate-950 transition hover:bg-cyan-300">Guardar lote</SubmitButton>
           </form>

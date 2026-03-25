@@ -197,10 +197,14 @@ function mapMedicine(medicine: MedicineWithPrescription | MedicineLegacy): Medic
   };
 }
 
-export async function getMedicines(businessId: string): Promise<MedicineListItem[]> {
+
+export async function getMedicinesViewData(businessId: string): Promise<{ medicines: MedicineListItem[]; supportsPrescriptionControl: boolean }> {
   try {
     const medicines = await getMedicinesWithPrescription(businessId);
-    return medicines.map(mapMedicine);
+    return {
+      medicines: medicines.map(mapMedicine),
+      supportsPrescriptionControl: true,
+    };
   } catch (error) {
     if (!isMissingPrescriptionColumnError(error)) {
       throw error;
@@ -208,6 +212,14 @@ export async function getMedicines(businessId: string): Promise<MedicineListItem
 
     console.warn('[medicines] prescription columns missing in database, using legacy query');
     const medicines = await getMedicinesLegacy(businessId);
-    return medicines.map(mapMedicine);
+    return {
+      medicines: medicines.map(mapMedicine),
+      supportsPrescriptionControl: false,
+    };
   }
+}
+
+export async function getMedicines(businessId: string): Promise<MedicineListItem[]> {
+  const result = await getMedicinesViewData(businessId);
+  return result.medicines;
 }
