@@ -10,10 +10,14 @@ function isMissingPrescriptionColumnError(error: unknown) {
   }
 
   const prismaError = error as { code?: string; meta?: { column?: string } };
+  const column = prismaError.meta?.column ?? '';
+
   return (
     prismaError.code === 'P2022' &&
-    (prismaError.meta?.column === 'Medicine.prescriptionIssuedAt' ||
-      prismaError.meta?.column === 'Medicine.prescriptionDurationMonths')
+    (column === 'Medicine.prescriptionIssuedAt' ||
+      column === 'prescriptionIssuedAt' ||
+      column === 'Medicine.prescriptionDurationMonths' ||
+      column === 'prescriptionDurationMonths')
   );
 }
 
