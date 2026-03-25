@@ -16,7 +16,7 @@ const notices: Record<string, string> = {
   'medicine-deleted': 'Medicamento eliminado con éxito.',
   'batch-created': 'Stock agregado con éxito.',
   'batch-deleted': 'Lote eliminado con éxito.',
-  'medicine-sold': 'Salida registrada con éxito.',
+  'medicine-sold': 'Salida registrada y stock actualizado.',
 };
 
 function SuccessIcon() {

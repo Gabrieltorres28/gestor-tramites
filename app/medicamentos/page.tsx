@@ -222,10 +222,11 @@ export default async function MedicamentosPage() {
                     <form action={sellMedicineAction} className="rounded-2xl border border-white/10 bg-slate-950/40 p-3">
                       <p className="mb-2 text-[11px] uppercase tracking-[0.28em] text-slate-500">Salida rápida</p>
                       <input type="hidden" name="medicineId" value={medicine.id} />
+                      <p className="mb-2 text-xs leading-5 text-slate-400">Descuenta unidades del stock disponible y actualiza la tarjeta automáticamente.</p>
                       <div className="flex items-center gap-2">
                         <input type="number" name="quantity" min="1" defaultValue="1" className="w-20 rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-sm outline-none" />
                         <SubmitButton pendingText="Registrando..." disabled={noStock} className="rounded-2xl bg-cyan-400 px-4 py-2 text-sm font-semibold text-slate-950 disabled:cursor-not-allowed disabled:opacity-50">
-                          {noStock ? 'Sin stock' : 'Registrar salida'}
+                          {noStock ? 'Sin stock' : 'Descontar stock'}
                         </SubmitButton>
                       </div>
                     </form>
@@ -247,7 +248,7 @@ export default async function MedicamentosPage() {
                   ) : null}
                 </div>
 
-                <div className="mt-4 grid grid-cols-2 gap-3 text-sm text-slate-300 sm:grid-cols-3 lg:grid-cols-5">
+                <div className="mt-4 grid grid-cols-2 gap-3 text-sm text-slate-300 sm:grid-cols-2 lg:grid-cols-4">
                   <div>
                     <p className="text-slate-500">Stock</p>
                     <p className="mt-1">{medicine.stockTotal}</p>
@@ -264,19 +265,30 @@ export default async function MedicamentosPage() {
                     <p className="text-slate-500">Venta</p>
                     <p className="mt-1">{formatCurrency(medicine.salePrice)}</p>
                   </div>
-                  <div>
-                    <p className="text-slate-500">Receta emitida</p>
-                    <p className="mt-1">{medicine.prescriptionIssuedAt ? formatDate(medicine.prescriptionIssuedAt) : 'Sin dato'}</p>
-                  </div>
-                  <div>
-                    <p className="text-slate-500">Receta vence</p>
-                    <p className="mt-1">{medicine.prescriptionExpiresAt ? formatDate(medicine.prescriptionExpiresAt) : 'Sin dato'}</p>
-                  </div>
+                  {medicine.prescriptionStatus !== 'none' ? (
+                    <>
+                      <div>
+                        <p className="text-slate-500">Receta emitida</p>
+                        <p className="mt-1">{medicine.prescriptionIssuedAt ? formatDate(medicine.prescriptionIssuedAt) : 'Sin dato'}</p>
+                      </div>
+                      <div>
+                        <p className="text-slate-500">Receta vence</p>
+                        <p className="mt-1">{medicine.prescriptionExpiresAt ? formatDate(medicine.prescriptionExpiresAt) : 'Sin dato'}</p>
+                      </div>
+                    </>
+                  ) : (
+                    <div>
+                      <p className="text-slate-500">Control</p>
+                      <p className="mt-1">No cargado</p>
+                    </div>
+                  )}
                   <div>
                     <p className="text-slate-500">Estado</p>
                     <p className="mt-1">{noStock ? 'Sin stock cargado' : 'Listo para salida'}</p>
                   </div>
                 </div>
+
+                <p className="mt-4 text-sm text-slate-300">Stock actual: <span className="font-semibold text-white">{medicine.stockTotal}</span> unidades.</p>
 
                 {medicine.prescriptionStatus === 'active' || medicine.prescriptionStatus === 'expiring' ? (
                   <p className="mt-4 text-sm text-slate-300">
