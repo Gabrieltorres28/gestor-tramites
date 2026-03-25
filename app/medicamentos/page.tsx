@@ -36,6 +36,7 @@ function getPrescriptionBadge(status: 'none' | 'active' | 'expiring' | 'expired'
 export default async function MedicamentosPage() {
   const user = await requireUserContext();
   const medicines = await getMedicines(user.businessId);
+  const lowStockCount = medicines.filter((medicine) => medicine.stockTotal <= 5).length;
 
   async function addMedicineAction(formData: FormData) {
     'use server';
@@ -53,17 +54,26 @@ export default async function MedicamentosPage() {
     if (result.ok) {
       redirect('/medicamentos?notice=medicine-created');
     }
+
+    redirect(`/medicamentos?error=${encodeURIComponent(result.message || 'No pudimos guardar el medicamento.')}`);
   }
 
   async function addBatchAction(formData: FormData) {
     'use server';
     const currentUser = await requireUserContext();
-    const result = await createMedicineBatch(currentUser, { medicineId: String(formData.get('medicineId') || ''), batchNumber: String(formData.get('batchNumber') || ''), expirationDate: String(formData.get('expirationDate') || ''), quantityAvailable: Number(formData.get('quantityAvailable') || 0) });
+    const result = await createMedicineBatch(currentUser, {
+      medicineId: String(formData.get('medicineId') || ''),
+      batchNumber: String(formData.get('batchNumber') || ''),
+      expirationDate: String(formData.get('expirationDate') || ''),
+      quantityAvailable: Number(formData.get('quantityAvailable') || 0),
+    });
     revalidatePath('/medicamentos');
     revalidatePath('/');
     if (result.ok) {
       redirect('/medicamentos?notice=batch-created');
     }
+
+    redirect(`/medicamentos?error=${encodeURIComponent(result.message || 'No pudimos guardar el stock.')}`);
   }
 
   async function removeMedicineAction(formData: FormData) {
@@ -75,6 +85,8 @@ export default async function MedicamentosPage() {
     if (result.ok) {
       redirect('/medicamentos?notice=medicine-deleted');
     }
+
+    redirect(`/medicamentos?error=${encodeURIComponent(result.message || 'No pudimos borrar el medicamento.')}`);
   }
 
   async function removeBatchAction(formData: FormData) {
@@ -86,6 +98,8 @@ export default async function MedicamentosPage() {
     if (result.ok) {
       redirect('/medicamentos?notice=batch-deleted');
     }
+
+    redirect(`/medicamentos?error=${encodeURIComponent(result.message || 'No pudimos borrar el lote.')}`);
   }
 
   async function sellMedicineAction(formData: FormData) {
@@ -97,6 +111,8 @@ export default async function MedicamentosPage() {
     if (result.ok) {
       redirect('/medicamentos?notice=medicine-sold');
     }
+
+    redirect(`/medicamentos?error=${encodeURIComponent(result.message || 'No pudimos registrar la salida.')}`);
   }
 
   return (
@@ -104,16 +120,35 @@ export default async function MedicamentosPage() {
       <FeedbackBanner />
       <section className="rounded-[2rem] border border-white/10 bg-white/5 p-5 shadow-xl shadow-slate-950/20 sm:p-6">
         <p className="text-xs uppercase tracking-[0.35em] text-cyan-300">Medicamentos</p>
-        <h1 className="mt-3 text-3xl font-semibold text-white">Stock, vencimientos y recetas en un mismo lugar</h1>
+        <h1 className="mt-3 text-3xl font-semibold text-white">Carga rápida y control claro</h1>
         <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-300">
-          Este módulo acompaña los trámites de medicamentos: controla lotes, deja registrar salidas y te muestra si la receta sigue vigente o ya necesita renovarse.
+          El foco acá es trabajar rápido: primero cargás el medicamento, después el stock, y solo si hace falta agregás el control de receta.
         </p>
+        <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <div className="rounded-2xl border border-white/10 bg-slate-950/40 p-4">
+            <p className="text-sm text-slate-400">Medicamentos</p>
+            <p className="mt-1 text-2xl font-semibold text-white">{medicines.length}</p>
+          </div>
+          <div className="rounded-2xl border border-white/10 bg-slate-950/40 p-4">
+            <p className="text-sm text-slate-400">Stock bajo</p>
+            <p className="mt-1 text-2xl font-semibold text-white">{lowStockCount}</p>
+          </div>
+          <div className="rounded-2xl border border-white/10 bg-slate-950/40 p-4">
+            <p className="text-sm text-slate-400">Con receta</p>
+            <p className="mt-1 text-2xl font-semibold text-white">{medicines.filter((medicine) => medicine.prescriptionStatus !== 'none').length}</p>
+          </div>
+          <div className="rounded-2xl border border-white/10 bg-slate-950/40 p-4">
+            <p className="text-sm text-slate-400">Por vencer</p>
+            <p className="mt-1 text-2xl font-semibold text-white">{medicines.filter((medicine) => medicine.prescriptionStatus === 'expiring').length}</p>
+          </div>
+        </div>
       </section>
 
-      <section className="mt-6 grid gap-6 xl:grid-cols-[1fr_0.95fr]">
+      <section className="mt-6 grid gap-6 xl:grid-cols-[1fr_0.9fr]">
         <div className="space-y-3">
           {medicines.map((medicine) => {
             const prescriptionBadge = getPrescriptionBadge(medicine.prescriptionStatus);
+            const noStock = medicine.stockTotal <= 0;
 
             return (
               <article key={medicine.id} className="rounded-[2rem] border border-white/10 bg-white/5 p-5 shadow-lg shadow-slate-950/20">
@@ -123,10 +158,14 @@ export default async function MedicamentosPage() {
                     <p className="mt-2 text-sm text-slate-300">{medicine.supplier || 'Sin proveedor'}</p>
                   </div>
                   <div className="flex flex-col gap-2">
-                    <form action={sellMedicineAction}>
+                    <form action={sellMedicineAction} className="rounded-2xl border border-white/10 bg-slate-950/40 p-3">
                       <input type="hidden" name="medicineId" value={medicine.id} />
-                      <input type="number" name="quantity" min="1" defaultValue="1" className="mb-2 w-24 rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-sm outline-none" />
-                      <SubmitButton pendingText="Registrando..." className="rounded-2xl bg-cyan-400 px-4 py-2 text-sm font-semibold text-slate-950">Registrar salida</SubmitButton>
+                      <div className="flex items-center gap-2">
+                        <input type="number" name="quantity" min="1" defaultValue="1" className="w-20 rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-sm outline-none" />
+                        <SubmitButton pendingText="Registrando..." disabled={noStock} className="rounded-2xl bg-cyan-400 px-4 py-2 text-sm font-semibold text-slate-950 disabled:cursor-not-allowed disabled:opacity-50">
+                          {noStock ? 'Sin stock' : 'Registrar salida'}
+                        </SubmitButton>
+                      </div>
                     </form>
                     <form action={removeMedicineAction}>
                       <input type="hidden" name="medicineId" value={medicine.id} />
@@ -139,14 +178,14 @@ export default async function MedicamentosPage() {
                   <span className={`rounded-full border px-3 py-1 text-xs font-medium ${prescriptionBadge.className}`}>
                     {prescriptionBadge.label}
                   </span>
-                  {medicine.prescriptionDurationMonths ? (
-                    <span className="rounded-full border border-cyan-400/20 bg-cyan-400/10 px-3 py-1 text-xs font-medium text-cyan-200">
-                      Dura {medicine.prescriptionDurationMonths} meses
+                  {medicine.stockTotal <= 5 ? (
+                    <span className="rounded-full border border-amber-400/20 bg-amber-400/10 px-3 py-1 text-xs font-medium text-amber-200">
+                      Stock bajo
                     </span>
                   ) : null}
                 </div>
 
-                <div className="mt-4 grid grid-cols-2 gap-3 text-sm text-slate-300 sm:grid-cols-3 lg:grid-cols-6">
+                <div className="mt-4 grid grid-cols-2 gap-3 text-sm text-slate-300 sm:grid-cols-4 lg:grid-cols-6">
                   <div>
                     <p className="text-slate-500">Stock</p>
                     <p className="mt-1">{medicine.stockTotal}</p>
@@ -211,25 +250,27 @@ export default async function MedicamentosPage() {
 
         <div className="space-y-6">
           <form action={addMedicineAction} className="rounded-[2rem] border border-white/10 bg-slate-900/70 p-5 shadow-xl shadow-slate-950/20 sm:p-6">
-            <h2 className="text-xl font-semibold text-white">Agregar medicamento</h2>
+            <h2 className="text-xl font-semibold text-white">Alta rápida de medicamento</h2>
+            <p className="mt-1 text-sm text-slate-400">Cargá lo mínimo para empezar a trabajar. El control de receta es opcional.</p>
             <div className="mt-5 grid gap-4">
               <label className="block"><span className="mb-2 block text-sm text-slate-300">Nombre</span><input name="name" className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none focus:border-cyan-400" /></label>
               <label className="block"><span className="mb-2 block text-sm text-slate-300">Proveedor</span><input name="supplier" className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none focus:border-cyan-400" /></label>
               <div className="grid grid-cols-2 gap-4"><label className="block"><span className="mb-2 block text-sm text-slate-300">Precio compra</span><input type="number" name="purchasePrice" className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none focus:border-cyan-400" /></label><label className="block"><span className="mb-2 block text-sm text-slate-300">Precio venta</span><input type="number" name="salePrice" className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none focus:border-cyan-400" /></label></div>
-              <div className="rounded-2xl border border-white/10 bg-slate-950/40 p-4">
-                <p className="text-sm font-medium text-white">Control de receta</p>
-                <p className="mt-1 text-sm text-slate-400">Opcional. Si lo completás, el sistema mostrará si la receta está vigente, por vencer o vencida.</p>
+              <details className="rounded-2xl border border-white/10 bg-slate-950/40 p-4">
+                <summary className="cursor-pointer list-none text-sm font-medium text-white">Agregar control de receta</summary>
+                <p className="mt-2 text-sm text-slate-400">Solo completalo si necesitás controlar vigencia. Si cargás una fecha, también tenés que indicar la duración.</p>
                 <div className="mt-4 grid gap-4 sm:grid-cols-2">
                   <DateField label="Fecha de receta" name="prescriptionIssuedAt" />
                   <label className="block"><span className="mb-2 block text-sm text-slate-300">Duración en meses</span><input type="number" name="prescriptionDurationMonths" min="1" placeholder="Ej. 3" className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none focus:border-cyan-400" /></label>
                 </div>
-              </div>
+              </details>
             </div>
             <SubmitButton pendingText="Guardando medicamento..." className="mt-5 w-full rounded-2xl bg-cyan-400 px-4 py-3 font-semibold text-slate-950 transition hover:bg-cyan-300">Guardar medicamento</SubmitButton>
           </form>
 
           <form action={addBatchAction} className="rounded-[2rem] border border-white/10 bg-slate-900/70 p-5 shadow-xl shadow-slate-950/20 sm:p-6">
             <h2 className="text-xl font-semibold text-white">Agregar stock</h2>
+            <p className="mt-1 text-sm text-slate-400">Usalo cuando el medicamento ya exista y solo quieras sumar unidades.</p>
             <div className="mt-5 grid gap-4">
               <label className="block"><span className="mb-2 block text-sm text-slate-300">Medicamento</span><select name="medicineId" className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none focus:border-cyan-400">{medicines.map((medicine) => <option key={medicine.id} value={medicine.id} className="bg-slate-900">{medicine.name}</option>)}</select></label>
               <label className="block"><span className="mb-2 block text-sm text-slate-300">Número de lote</span><input name="batchNumber" className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none focus:border-cyan-400" /></label>
