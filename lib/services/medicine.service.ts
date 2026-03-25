@@ -96,6 +96,7 @@ export async function deleteMedicine(user: UserContext, input: unknown) {
 
   const medicine = await db.medicine.findFirst({
     where: { id: parsed.data.medicineId, businessId: user.businessId },
+    select: { id: true },
   });
 
   if (medicine === null) {
@@ -145,6 +146,7 @@ export async function createMedicineBatch(user: UserContext, input: unknown) {
 
   const medicine = await db.medicine.findFirst({
     where: { id: parsed.data.medicineId, businessId: user.businessId },
+    select: { id: true },
   });
 
   if (medicine === null) {
@@ -213,10 +215,17 @@ export async function sellMedicine(user: UserContext, input: unknown) {
 
   const medicine = await db.medicine.findFirst({
     where: { id: parsed.data.medicineId, businessId: user.businessId },
-    include: {
+    select: {
+      id: true,
+      salePrice: true,
       batches: {
         where: { quantityAvailable: { gt: 0 } },
         orderBy: { expirationDate: 'asc' },
+        select: {
+          id: true,
+          quantityAvailable: true,
+          expirationDate: true,
+        },
       },
     },
   });
