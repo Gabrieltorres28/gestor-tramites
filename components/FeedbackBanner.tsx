@@ -7,6 +7,7 @@ const notices: Record<string, string> = {
   'client-created': 'Cliente guardado con éxito.',
   'client-deleted': 'Cliente eliminado con éxito.',
   'procedure-created': 'Trámite guardado con éxito.',
+  'procedure-edited': 'Trámite actualizado con éxito.',
   'procedure-updated': 'Estado del trámite actualizado con éxito.',
   'procedure-deleted': 'Trámite eliminado con éxito.',
   'cash-created': 'Movimiento guardado con éxito.',

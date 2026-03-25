@@ -5,8 +5,14 @@ import { procedureStatusLabels, procedureTypeLabels, type ProcedureListItem } fr
 export async function getProcedures(businessId: string): Promise<ProcedureListItem[]> {
   const procedures = await db.procedure.findMany({
     where: { businessId },
-    include: { client: true },
-    orderBy: { createdAt: 'desc' },
+    include: {
+      client: true,
+      cashMovements: {
+        where: { type: 'COMMISSION_INCOME' },
+        select: { id: true },
+      },
+    },
+    orderBy: [{ status: 'asc' }, { createdAt: 'desc' }],
   });
 
   return procedures.map((procedure) => ({
@@ -14,6 +20,7 @@ export async function getProcedures(businessId: string): Promise<ProcedureListIt
     clientId: procedure.clientId,
     clientName: procedure.client.fullName,
     type: procedureTypeLabels[procedure.type],
+    typeKey: procedure.type,
     status: procedureStatusLabels[procedure.status],
     statusKey: procedure.status,
     amountManaged: serializeDecimal(procedure.amountManaged),
@@ -22,5 +29,6 @@ export async function getProcedures(businessId: string): Promise<ProcedureListIt
     startedAt: formatDate(procedure.startedAt),
     completedAt: procedure.completedAt ? formatDate(procedure.completedAt) : undefined,
     description: procedure.description || '',
+    cashRecorded: procedure.cashMovements.length > 0,
   }));
 }

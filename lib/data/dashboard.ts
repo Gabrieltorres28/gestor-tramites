@@ -17,7 +17,8 @@ export async function getDashboardData(businessId: string) {
 
   const cajaActual = movements.reduce((sum, movement) => sum + movement.amount, 0);
   const comisiones = procedures.reduce((sum, procedure) => sum + procedure.commissionAmount, 0);
-  const tramitesActivos = procedures.filter((procedure) => procedure.status === 'En proceso').length;
+  const tramitesActivos = procedures.filter((procedure) => procedure.statusKey === 'IN_PROGRESS').length;
+  const tramitesCobrados = procedures.filter((procedure) => procedure.statusKey === 'PAID').length;
   const gananciaMensual = movements.filter((movement) => movement.type === 'Ingreso comisión').reduce((sum, movement) => sum + movement.amount, 0);
   const medicamentosPorVencer = medicines.filter((medicine) => medicine.expirationStatus === 'proximo').length;
   const medicamentosVencidos = medicines.filter((medicine) => medicine.expirationStatus === 'vencido').length;
@@ -61,6 +62,7 @@ export async function getDashboardData(businessId: string) {
       cajaActual,
       comisiones,
       tramitesActivos,
+      tramitesCobrados,
       gananciaMensual,
       medicamentosPorVencer,
       medicamentosVencidos,

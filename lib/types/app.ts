@@ -41,6 +41,7 @@ export type ProcedureListItem = {
   clientId: string;
   clientName: string;
   type: string;
+  typeKey: ProcedureType;
   status: string;
   statusKey: ProcedureStatus;
   amountManaged: number;
@@ -49,6 +50,7 @@ export type ProcedureListItem = {
   startedAt: string;
   completedAt?: string;
   description: string;
+  cashRecorded: boolean;
 };
 
 export type CashMovementListItem = {
@@ -59,6 +61,7 @@ export type CashMovementListItem = {
   amount: number;
   movementDate: string;
   procedureId?: string;
+  sourceLabel: 'Automático' | 'Manual';
 };
 
 export type MedicineBatchItem = {
@@ -78,6 +81,11 @@ export type MedicineListItem = {
   nextExpiration?: string;
   expirationStatus: 'ok' | 'proximo' | 'vencido';
   expirationDays?: number;
+  prescriptionIssuedAt?: string;
+  prescriptionDurationMonths?: number;
+  prescriptionExpiresAt?: string;
+  prescriptionStatus: 'none' | 'active' | 'expiring' | 'expired';
+  prescriptionDaysRemaining?: number;
   batches: MedicineBatchItem[];
 };
 
@@ -87,6 +95,14 @@ export const procedureTypeLabels: Record<ProcedureType, string> = {
   MEDICINES: 'Medicamentos',
   SUBSIDY: 'Subsidio',
   OTHER: 'Otro',
+};
+
+export const procedureTypeDescriptions: Record<ProcedureType, string> = {
+  RETIREMENT: 'Seguimiento previsional con foco en jubilación.',
+  PENSION: 'Gestión de pensión con hitos claros para avanzar.',
+  MEDICINES: 'Control de medicamentos, recetas y entregas vinculadas.',
+  SUBSIDY: 'Trámite de subsidio con control de etapas y cobro.',
+  OTHER: 'Gestión administrativa personalizada.',
 };
 
 export const procedureStatusLabels: Record<ProcedureStatus, string> = {

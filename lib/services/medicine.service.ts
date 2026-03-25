@@ -4,6 +4,19 @@ import { deleteBatchSchema, deleteMedicineSchema, medicineBatchSchema, medicineS
 import { createAuditLog } from '@/lib/services/audit.service';
 import type { UserContext } from '@/lib/types/app';
 
+function isMissingPrescriptionColumnError(error: unknown) {
+  if (typeof error !== 'object' || error === null) {
+    return false;
+  }
+
+  const prismaError = error as { code?: string; meta?: { column?: string } };
+  return (
+    prismaError.code === 'P2022' &&
+    (prismaError.meta?.column === 'Medicine.prescriptionIssuedAt' ||
+      prismaError.meta?.column === 'Medicine.prescriptionDurationMonths')
+  );
+}
+
 export async function createMedicine(user: UserContext, input: unknown) {
   const parsed = medicineSchema.safeParse(input);
 
@@ -11,16 +24,41 @@ export async function createMedicine(user: UserContext, input: unknown) {
     return { ok: false as const, message: parsed.error.issues[0]?.message || 'Datos inválidos.' };
   }
 
-  const medicine = await db.medicine.create({
-    data: {
-      businessId: user.businessId,
-      createdByUserId: user.userId,
-      name: parsed.data.name,
-      supplier: parsed.data.supplier || null,
-      purchasePrice: parsed.data.purchasePrice,
-      salePrice: parsed.data.salePrice,
-    },
-  });
+  let medicine;
+
+  try {
+    medicine = await db.medicine.create({
+      data: {
+        businessId: user.businessId,
+        createdByUserId: user.userId,
+        name: parsed.data.name,
+        supplier: parsed.data.supplier || null,
+        purchasePrice: parsed.data.purchasePrice,
+        salePrice: parsed.data.salePrice,
+        prescriptionIssuedAt: parsed.data.prescriptionIssuedAt ? new Date(parsed.data.prescriptionIssuedAt) : null,
+        prescriptionDurationMonths:
+          parsed.data.prescriptionDurationMonths === '' || parsed.data.prescriptionDurationMonths === undefined
+            ? null
+            : parsed.data.prescriptionDurationMonths,
+      },
+    });
+  } catch (error) {
+    if (!isMissingPrescriptionColumnError(error)) {
+      throw error;
+    }
+
+    console.warn('[medicine] prescription columns missing in database, creating medicine without prescription fields');
+    medicine = await db.medicine.create({
+      data: {
+        businessId: user.businessId,
+        createdByUserId: user.userId,
+        name: parsed.data.name,
+        supplier: parsed.data.supplier || null,
+        purchasePrice: parsed.data.purchasePrice,
+        salePrice: parsed.data.salePrice,
+      },
+    });
+  }
 
   await createAuditLog({
     businessId: user.businessId,
@@ -194,9 +232,9 @@ export async function sellMedicine(user: UserContext, input: unknown) {
     entityType: 'medicine_sale',
     entityId: medicine.id,
     action: AuditAction.CREATE,
-    description: 'Venta de medicamento con descuento FIFO.',
+    description: 'Salida de medicamento con descuento FIFO.',
     metadata: { quantity: parsed.data.quantity },
   });
 
-  return { ok: true as const, message: 'Venta procesada correctamente.' };
+  return { ok: true as const, message: 'Salida registrada correctamente.' };
 }

@@ -1,7 +1,7 @@
 import { ProcedureStatus, ProcedureType } from '@prisma/client';
 import { z } from 'zod';
 
-export const procedureSchema = z.object({
+const baseProcedureSchema = z.object({
   clientId: z.string().cuid(),
   type: z.nativeEnum(ProcedureType),
   status: z.nativeEnum(ProcedureStatus),
@@ -9,6 +9,12 @@ export const procedureSchema = z.object({
   commissionRate: z.coerce.number().min(0).max(100),
   startedAt: z.string().min(1, 'Ingresá una fecha válida.'),
   description: z.string().trim().optional().or(z.literal('')),
+});
+
+export const procedureSchema = baseProcedureSchema;
+
+export const updateProcedureSchema = baseProcedureSchema.extend({
+  procedureId: z.string().cuid(),
 });
 
 export const updateProcedureStatusSchema = z.object({

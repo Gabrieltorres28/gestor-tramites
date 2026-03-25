@@ -5,7 +5,7 @@ import { cashMovementTypeLabels, paymentMethodLabels, type CashMovementListItem 
 export async function getCashMovements(businessId: string): Promise<CashMovementListItem[]> {
   const movements = await db.cashMovement.findMany({
     where: { businessId },
-    orderBy: { movementDate: 'desc' },
+    orderBy: [{ movementDate: 'desc' }, { createdAt: 'desc' }],
   });
 
   return movements.map((movement) => ({
@@ -16,5 +16,6 @@ export async function getCashMovements(businessId: string): Promise<CashMovement
     amount: serializeDecimal(movement.amount),
     movementDate: formatDate(movement.movementDate),
     procedureId: movement.procedureId || undefined,
+    sourceLabel: movement.procedureId ? 'Automático' : 'Manual',
   }));
 }
